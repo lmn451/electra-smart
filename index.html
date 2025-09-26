@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Electra Control</title>
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <h1>Electra Control</h1>
+    <div class="toolbar">
+      <button id="refresh">Refresh All</button>
+      <label>
+        <input type="checkbox" id="autoRefreshChk" /> Auto-refresh
+      </label>
+      <label>
+        every <input type="number" id="autoRefreshSec" value="30" min="5" max="300" step="5" /> sec
+      </label>
+      <span id="statusLine" class="status"></span>
+    </div>
+
+    <div id="devices" class="cards"></div>
+
+    <script src="./app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+      }
+    </script>
+  </body>
+</html>
