@@ -13,11 +13,12 @@
     <div class="toolbar">
       <button id="refresh">Refresh All</button>
       <label>
-        <input type="checkbox" id="autoRefreshChk" /> Auto-refresh
+        <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
       </label>
       <label>
-        every <input type="number" id="autoRefreshSec" value="30" min="5" max="300" step="5" /> sec
+        every <input type="number" id="autoRefreshSec" value="5" min="5" max="300" step="5" /> sec
       </label>
+      <span id="autoStatus" class="status"></span>
       <span id="statusLine" class="status"></span>
     </div>
 

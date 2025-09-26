@@ -10,8 +10,8 @@ const state = {
   devices: [],
   statusMap: new Map(),
   timerId: null,
-  autoSec: 30,
-  autoEnabled: false,
+  autoSec: 5,
+  autoEnabled: true,
 };
 
 async function apiFetch(url, options = {}) {
@@ -43,6 +43,26 @@ function el(tag, attrs = {}, ...children) {
 function setStatusLine(text) {
   const elStatus = document.getElementById('statusLine');
   if (elStatus) elStatus.textContent = text || '';
+}
+
+function setAutoStatus(text) {
+  const elAuto = document.getElementById('autoStatus');
+  if (elAuto) elAuto.textContent = text || '';
+}
+
+function updateAutoRefreshUI() {
+  const chk = document.getElementById('autoRefreshChk');
+  const secInput = document.getElementById('autoRefreshSec');
+  if (chk) chk.checked = !!state.autoEnabled;
+  if (secInput && state.autoSec) secInput.value = String(state.autoSec);
+  const running = !!state.timerId;
+  if (!state.autoEnabled) {
+    setAutoStatus('Auto-refresh: Off');
+  } else if (!running) {
+    setAutoStatus('Auto-refresh: Paused');
+  } else {
+    setAutoStatus(`Auto-refresh: On (${state.autoSec}s)`);
+  }
 }
 
 async function loadDevices() {
@@ -243,13 +263,15 @@ async function togglePower(id, turnOn) {
 
 function applyAutoRefresh(enabled, sec) {
   if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
-  state.autoEnabled = enabled;
-  state.autoSec = sec;
-  if (enabled) {
+  const seconds = Math.max(1, Number(sec) || 5);
+  state.autoEnabled = !!enabled;
+  state.autoSec = seconds;
+  if (state.autoEnabled) {
     state.timerId = setInterval(() => {
       state.devices.forEach(d => refreshDevice(d.id));
-    }, sec * 1000);
+    }, seconds * 1000);
   }
+  updateAutoRefreshUI();
 }
 
 function initUI() {
@@ -258,9 +280,20 @@ function initUI() {
   const chk = document.getElementById('autoRefreshChk');
   const secInput = document.getElementById('autoRefreshSec');
   if (chk && secInput) {
-    chk.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 30)));
-    secInput.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 30)));
+    chk.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 5)));
+    secInput.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 5)));
+    // Start auto-refresh immediately based on current UI state
+    applyAutoRefresh(chk.checked, Number(secInput.value || 5));
   }
+  // Pause/resume auto-refresh when tab visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
+      updateAutoRefreshUI();
+    } else if (state.autoEnabled) {
+      applyAutoRefresh(true, state.autoSec);
+    }
+  });
   loadDevices();
 }
 
