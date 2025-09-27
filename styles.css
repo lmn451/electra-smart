@@ -39,12 +39,31 @@ h1{margin:0 0 1rem 0;font-size:1.5rem}
  @media (min-width:1024px){
    .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
  }
-@media (min-width:960px){
-  .controls{grid-template-columns:1fr 1fr 1fr auto auto}
-}
+ @media (min-width:960px){
+   .controls{grid-template-columns:1fr 1fr 1fr auto auto}
+ }
 
-/* Auth panel */
-.auth-panel.hidden{display:none}
-.auth-panel{padding:1rem}
-.auth-panel input[type="tel"], .auth-panel input[placeholder="123456"]{width:100%;padding:.6rem;border:1px solid var(--border);border-radius:.5rem;background:#101418;color:var(--fg)}
-.auth-panel label{display:grid;gap:.4rem;margin:.5rem 0}
+ /* Auth panel */
+ .auth-panel.hidden {
+   display: none
+ }
+
+ .auth-panel {
+   padding: 1rem
+ }
+
+ .auth-panel input[type="tel"],
+ .auth-panel input[placeholder="123456"] {
+   width: 100%;
+   padding: .6rem;
+   border: 1px solid var(--border);
+   border-radius: .5rem;
+   background: #101418;
+   color: var(--fg)
+ }
+
+ .auth-panel label {
+   display: grid;
+   gap: .4rem;
+   margin: .5rem 0
+ }
