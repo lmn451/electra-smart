@@ -1,4 +1,14 @@
 export function mapStatusFields(s) {
+  // Optimistic update from simple change object
+  if (s && !s.commandJson) {
+    const newFields = {}
+    if (s.mode) newFields.mode = s.mode
+    if (s.fan) newFields.fan = s.fan
+    if (s.temperature !== undefined) newFields.spt = s.temperature
+    return newFields
+  }
+
+  // Full status object from API
   const cj = s?.commandJson || {};
   const operoper = cj?.OPER?.OPER || {};
   const diag = cj?.DIAG_L2?.DIAG_L2 || {};
