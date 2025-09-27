@@ -8,7 +8,11 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8788'
     }
   },
+  css: {
+    devSourcemap: true
+  },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    sourcemap: true
   }
 });
