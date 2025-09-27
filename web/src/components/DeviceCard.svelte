@@ -25,10 +25,11 @@
   let mode = "",
     fan = "",
     temp = "";
+  let editing = false;
 
-  $: mode = fields?.mode ?? "";
-  $: fan = fields?.fan ?? "";
-  $: temp = fields?.spt ? String(fields.spt) : "";
+  $: if (!editing) mode = fields?.mode ?? "";
+  $: if (!editing) fan = fields?.fan ?? "";
+  $: if (!editing) temp = fields?.spt ? String(fields.spt) : "";
 
   let working = false;
 
@@ -45,6 +46,7 @@
       working = true;
       await applyCommand(body);
       statusLine.set(`Applied to ${id}`);
+      editing = false;
       await refresh();
     } catch (e) {
       statusLine.set(`Apply error for ${id}: ${e.message}`);
@@ -98,7 +100,12 @@
   </div>
   <div class="controls">
     <label class="visually-hidden" for={`modeSel-${id}`}>Mode</label>
-    <select id={`modeSel-${id}`} bind:value={mode} aria-label="Mode">
+    <select
+      id={`modeSel-${id}`}
+      bind:value={mode}
+      on:change={() => (editing = true)}
+      aria-label="Mode"
+    >
       <option value="">Mode…</option>
       <option value="STBY">STBY (Standby)</option>
       <option value="COOL">COOL</option>
@@ -109,7 +116,12 @@
     </select>
 
     <label class="visually-hidden" for={`fanSel-${id}`}>Fan speed</label>
-    <select id={`fanSel-${id}`} bind:value={fan} aria-label="Fan speed">
+    <select
+      id={`fanSel-${id}`}
+      bind:value={fan}
+      on:change={() => (editing = true)}
+      aria-label="Fan speed"
+    >
       <option value="">Fan…</option>
       <option value="LOW">LOW</option>
       <option value="MED">MED</option>
@@ -120,12 +132,16 @@
     <div class="tempctl">
       <button
         class="btn"
-        on:click={() => (temp = String(Math.max(10, Number(temp || 24) - 1)))}
+        on:click={() => {
+          temp = String(Math.max(10, Number(temp || 24) - 1));
+          editing = true;
+        }}
         aria-label="Decrease setpoint">−</button
       >
       <input
         type="number"
         bind:value={temp}
+        on:input={() => (editing = true)}
         min="10"
         max="35"
         step="1"
@@ -134,7 +150,10 @@
       />
       <button
         class="btn"
-        on:click={() => (temp = String(Math.min(35, Number(temp || 24) + 1)))}
+        on:click={() => {
+          temp = String(Math.min(35, Number(temp || 24) + 1));
+          editing = true;
+        }}
         aria-label="Increase setpoint">+</button
       >
     </div>
@@ -142,8 +161,13 @@
     <button class="btn primary" on:click={apply} disabled={working}>
       {working ? "Applying…" : "Apply"}
     </button>
-    <button class="btn secondary" on:click={refresh} disabled={working}
-      >Refresh</button
+    <button
+      class="btn secondary"
+      on:click={() => {
+        editing = false;
+        refresh();
+      }}
+      disabled={working}>{editing ? "Cancel" : "Refresh"}</button
     >
   </div>
   <div class="actions">
@@ -154,4 +178,10 @@
       >Power Off</button
     >
   </div>
+  {#if editing}
+    <div class="editing-notice">
+      Editing mode: Local changes active. Click Apply to save or Cancel to
+      revert.
+    </div>
+  {/if}
 </div>
