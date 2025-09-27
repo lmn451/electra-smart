@@ -207,8 +207,8 @@ function renderDeviceCards(devices) {
         el('div', { class: 'kv' }, el('span', { class: 'k', text: 'Current' }), el('span', { id: `cur-${id}`, text: '—' })),
       ),
       el('div', { class: 'controls' },
-        buildModeSelect(id),
-        buildFanSelect(id),
+        buildModeControl(id),
+        buildFanControl(id),
         buildTempControl(id),
         el('button', { id: `apply-${id}`, class: 'btn primary' }, 'Apply'),
         el('button', { id: `refresh-${id}`, class: 'btn secondary' }, 'Refresh'),
@@ -216,7 +216,8 @@ function renderDeviceCards(devices) {
       el('div', { class: 'actions' },
         el('button', { id: `power-on-${id}`, class: 'btn' }, 'Power On'),
         el('button', { id: `power-off-${id}`, class: 'btn' }, 'Power Off')
-      )
+      ),
+      el('div', { class: 'error-banner', id: `error-${id}` })
     );
     container.appendChild(card);
 
@@ -231,28 +232,40 @@ function renderDeviceCards(devices) {
   });
 }
 
-function buildModeSelect(id) {
-  const sel = el('select', { id: `modeSel-${id}` },
-    el('option', { value: '', text: 'Mode…' }),
-    el('option', { value: 'STBY', text: 'STBY (Standby)' }),
-    el('option', { value: 'COOL', text: 'COOL' }),
-    el('option', { value: 'FAN', text: 'FAN' }),
-    el('option', { value: 'DRY', text: 'DRY' }),
-    el('option', { value: 'HEAT', text: 'HEAT' }),
-    el('option', { value: 'AUTO', text: 'AUTO' }),
-  );
-  return sel;
+function buildSegControl(id, type, options) {
+  const container = el('div', { class: 'seg-control', id: `${type}Sel-${id}`, dataset: {testid: `seg-control-${type}`} });
+  options.forEach(opt => {
+    const btn = el('button', { text: opt.label, dataset: { value: opt.value } });
+    btn.onclick = () => {
+      // De-select siblings
+      container.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      // Select self
+      btn.classList.add('active');
+    };
+    container.appendChild(btn);
+  });
+  return container;
 }
 
-function buildFanSelect(id) {
-  const sel = el('select', { id: `fanSel-${id}` },
-    el('option', { value: '', text: 'Fan…' }),
-    el('option', { value: 'LOW', text: 'LOW' }),
-    el('option', { value: 'MED', text: 'MED' }),
-    el('option', { value: 'HIGH', text: 'HIGH' }),
-    el('option', { value: 'AUTO', text: 'AUTO' }),
-  );
-  return sel;
+function buildModeControl(id) {
+  const opts = [
+    { value: 'COOL', label: 'Cool' },
+    { value: 'HEAT', label: 'Heat' },
+    { value: 'FAN', label: 'Fan' },
+    { value: 'DRY', label: 'Dry' },
+    { value: 'AUTO', label: 'Auto' },
+  ];
+  return buildSegControl(id, 'mode', opts);
+}
+
+function buildFanControl(id) {
+  const opts = [
+    { value: 'LOW', label: 'Low' },
+    { value: 'MED', label: 'Med' },
+    { value: 'HIGH', label: 'High' },
+    { value: 'AUTO', label: 'Auto' },
+  ];
+  return buildSegControl(id, 'fan', opts);
 }
 
 function buildTempControl(id){
@@ -304,6 +317,14 @@ function pickCurrentTemp(diagL2) {
   return null;
 }
 
+function updateSegControl(id, type, value) {
+  const container = document.getElementById(`${type}Sel-${id}`);
+  if (!container) return;
+  container.querySelectorAll('button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
+}
+
 function paintStatus(id, fields) {
   const bade = document.getElementById(`badge-${id}`);
   if (bade) {
@@ -321,6 +342,10 @@ function paintStatus(id, fields) {
   if (cur) cur.textContent = fields.current ?? '—';
   const tempInput = document.getElementById(`temp-${id}`);
   if (tempInput && !tempInput.value && fields.spt != null) tempInput.value = String(fields.spt);
+
+  // Update controls to reflect current state
+  updateSegControl(id, 'mode', fields.mode);
+  updateSegControl(id, 'fan', fields.fan);
 }
 
 function stepTemp(id, delta){
@@ -333,34 +358,67 @@ function stepTemp(id, delta){
   input.value = String(next);
 }
 
+function getSelectedControlValue(id, type) {
+  const container = document.getElementById(`${type}Sel-${id}`);
+  const activeBtn = container?.querySelector('button.active');
+  return activeBtn?.dataset.value;
+}
+
+function setCardPending(id, isPending, error = null) {
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  const errBanner = document.getElementById(`error-${id}`);
+  if (!card) return;
+  card.classList.toggle('pending', isPending);
+  card.classList.toggle('error', !!error);
+  if (errBanner) errBanner.textContent = error || '';
+}
+
 async function applyChanges(id) {
-  const modeSel = document.getElementById(`modeSel-${id}`);
-  const fanSel = document.getElementById(`fanSel-${id}`);
+  const mode = getSelectedControlValue(id, 'mode');
+  const fan = getSelectedControlValue(id, 'fan');
   const tempInput = document.getElementById(`temp-${id}`);
-  const body = { ac_id: id };
-  if (modeSel && modeSel.value) body.mode = modeSel.value;
-  if (fanSel && fanSel.value) body.fan = fanSel.value;
-  if (tempInput && tempInput.value) body.temperature = Number(tempInput.value);
-  if (!body.mode && !body.fan && body.temperature === undefined) {
-    setStatusLine('Nothing to apply');
+  const temperature = tempInput?.value ? Number(tempInput.value) : undefined;
+  const body = { ac_id: id, mode, fan, temperature };
+  if (!mode && !fan && temperature === undefined) {
+    setStatusLine('No changes to apply');
     return;
   }
+  const oldState = state.statusMap.get(id);
+  setCardPending(id, true);
   try {
+    // Optimistic update
+    const optimisticState = { ...oldState, isOn: true };
+    if (mode) optimisticState.mode = mode;
+    if (fan) optimisticState.fan = fan;
+    if (temperature) optimisticState.spt = temperature;
+    paintStatus(id, optimisticState);
     await apiFetch(endpoints.sendCommand, { method: 'POST', body: JSON.stringify(body) });
     setStatusLine(`Applied to ${id}`);
     await refreshDevice(id);
   } catch (e) {
     setStatusLine(`Apply error for ${id}: ${e.message}`);
+    setCardPending(id, false, e.message);
+    if (oldState) paintStatus(id, oldState); // Revert
+  } finally {
+    setCardPending(id, false);
   }
 }
 
 async function togglePower(id, turnOn) {
+  const oldState = state.statusMap.get(id);
+  setCardPending(id, true);
   try {
+    // Optimistic update
+    paintStatus(id, { ...oldState, isOn: turnOn });
     await apiFetch(endpoints.power, { method: 'POST', body: JSON.stringify({ ac_id: id, on: turnOn }) });
     setStatusLine(`Power ${turnOn ? 'On' : 'Off'} sent to ${id}`);
     await refreshDevice(id);
   } catch (e) {
     setStatusLine(`Power toggle error for ${id}: ${e.message}`);
+    setCardPending(id, false, e.message);
+    if (oldState) paintStatus(id, oldState); // Revert
+  } finally {
+    setCardPending(id, false);
   }
 }
 
