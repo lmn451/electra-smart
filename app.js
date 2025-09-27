@@ -15,6 +15,9 @@ const state = {
   autoSec: 5,
   autoEnabled: true,
   pendingImei: '',
+  pendingPhone: '',
+  resendTimerId: null,
+  resendSec: 30,
 };
 
 const CREDS_KEY = 'electraCreds';
@@ -87,10 +90,63 @@ function setAutoStatus(text) {
 
 function updateAuthUI() {
   const panel = document.getElementById('authPanel');
+  const logoutRow = document.getElementById('logoutRow');
+  const toolbar = document.getElementById('toolbar');
   const creds = getCreds();
   if (panel) panel.classList.toggle('hidden', !!creds);
+  if (logoutRow) logoutRow.classList.toggle('hidden', !creds);
+  if (toolbar) toolbar.classList.toggle('hidden', !creds);
   const authStatus = document.getElementById('authStatus');
   if (authStatus) authStatus.textContent = creds ? `Signed in (IMEI ${creds.imei})` : 'Not signed in';
+}
+
+function showStep(step) {
+  const stepPhone = document.getElementById('stepPhone');
+  const stepCode = document.getElementById('stepCode');
+  if (!stepPhone || !stepCode) return;
+  if (step === 'phone') {
+    stepPhone.classList.remove('hidden');
+    stepCode.classList.add('hidden');
+    const inp = document.getElementById('phoneInput');
+    if (inp) inp.focus();
+  } else {
+    stepPhone.classList.add('hidden');
+    stepCode.classList.remove('hidden');
+    const first = document.getElementById('otp-1');
+    if (first) first.focus();
+  }
+}
+
+function getOtpInputs() {
+  return [1,2,3,4,5,6].map(i => document.getElementById(`otp-${i}`)).filter(Boolean);
+}
+
+function clearOtpInputs() {
+  getOtpInputs().forEach(inp => { inp.value = ''; });
+}
+
+function readOtpValue() {
+  return getOtpInputs().map(inp => (inp.value || '').trim()).join('');
+}
+
+function startResendTimer() {
+  const countdown = document.getElementById('resendCountdown');
+  const resendBtn = document.getElementById('resendBtn');
+  let remaining = state.resendSec;
+  if (resendBtn) resendBtn.disabled = true;
+  if (countdown) countdown.textContent = `You can resend in ${remaining}s`;
+  if (state.resendTimerId) clearInterval(state.resendTimerId);
+  state.resendTimerId = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(state.resendTimerId);
+      state.resendTimerId = null;
+      if (countdown) countdown.textContent = '';
+      if (resendBtn) resendBtn.disabled = false;
+    } else {
+      if (countdown) countdown.textContent = `You can resend in ${remaining}s`;
+    }
+  }, 1000);
 }
 
 function updateAutoRefreshUI() {
@@ -321,44 +377,56 @@ function applyAutoRefresh(enabled, sec) {
   updateAutoRefreshUI();
 }
 
-async function sendOtp() {
+async function sendOtp(isResend = false) {
   const phoneInput = document.getElementById('phoneInput');
   const imeiOutput = document.getElementById('imeiOutput');
   const authStatus = document.getElementById('authStatus');
-  const phone = (phoneInput?.value || '').trim();
-  if (!phone) { authStatus.textContent = 'Enter phone number'; return; }
+  const phoneEcho = document.getElementById('phoneEcho');
+  const sendBtn = document.getElementById('sendOtpBtn');
+  const resendBtn = document.getElementById('resendBtn');
+  const phone = (phoneInput?.value || state.pendingPhone || '').trim();
+  if (!phone) { if (authStatus) authStatus.textContent = 'Enter phone number'; return; }
   try {
-    const res = await apiFetch(endpoints.authStart, { method: 'POST', body: JSON.stringify({ phone }) });
+    if (sendBtn) sendBtn.disabled = true;
+    if (resendBtn) resendBtn.disabled = true;
+    const payload = isResend && state.pendingImei ? { phone, imei: state.pendingImei } : { phone };
+    const res = await apiFetch(endpoints.authStart, { method: 'POST', body: JSON.stringify(payload) });
     const imei = res?.imei;
     if (!imei) throw new Error('No IMEI returned');
     state.pendingImei = imei;
+    state.pendingPhone = phone;
     if (imeiOutput) imeiOutput.value = imei;
-    authStatus.textContent = 'Code sent';
+    if (authStatus) authStatus.textContent = 'Code sent';
+    if (phoneEcho) phoneEcho.textContent = phone;
+    clearOtpInputs();
+    showStep('code');
+    startResendTimer();
   } catch (e) {
-    authStatus.textContent = `Send failed: ${e.message}`;
+    if (authStatus) authStatus.textContent = `Send failed: ${e.message}`;
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
   }
 }
 
 async function verifyOtp() {
   const phoneInput = document.getElementById('phoneInput');
   const imeiOutput = document.getElementById('imeiOutput');
-  const codeInput = document.getElementById('codeInput');
   const rememberChk = document.getElementById('rememberChk');
   const authStatus = document.getElementById('authStatus');
-  const phone = (phoneInput?.value || '').trim();
-  const code = (codeInput?.value || '').trim();
+  const phone = (phoneInput?.value || state.pendingPhone || '').trim();
+  const code = readOtpValue();
   const imei = (imeiOutput?.value || state.pendingImei || '').trim();
-  if (!phone || !code || !imei) { authStatus.textContent = 'Enter phone, IMEI and code'; return; }
+  if (!phone || !code || !imei) { if (authStatus) authStatus.textContent = 'Enter phone and full code'; return; }
   try {
     const res = await apiFetch(endpoints.authVerify, { method: 'POST', body: JSON.stringify({ imei, phone, code }) });
     const token = res?.token;
     if (!token) throw new Error('No token');
     setCreds({ imei, token }, !!rememberChk?.checked);
     updateAuthUI();
-    authStatus.textContent = 'Signed in';
+    if (authStatus) authStatus.textContent = 'Signed in';
     await loadDevices();
   } catch (e) {
-    authStatus.textContent = `Verify failed: ${e.message}`;
+    if (authStatus) authStatus.textContent = `Verify failed: ${e.message}`;
   }
 }
 
@@ -378,9 +446,38 @@ function initUI() {
   const sendOtpBtn = document.getElementById('sendOtpBtn');
   const verifyBtn = document.getElementById('verifyBtn');
   const logoutBtn = document.getElementById('logoutBtn');
-  if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOtp);
+  const editPhoneLink = document.getElementById('editPhoneLink');
+  const resendBtn = document.getElementById('resendBtn');
+  if (sendOtpBtn) sendOtpBtn.addEventListener('click', () => sendOtp(false));
+  if (resendBtn) resendBtn.addEventListener('click', () => sendOtp(true));
   if (verifyBtn) verifyBtn.addEventListener('click', verifyOtp);
-  if (logoutBtn) logoutBtn.addEventListener('click', () => { clearCreds(); updateAuthUI(); setStatusLine('Signed out'); });
+  if (logoutBtn) logoutBtn.addEventListener('click', () => { clearCreds(); updateAuthUI(); setStatusLine('Signed out'); showStep('phone'); });
+  if (editPhoneLink) editPhoneLink.addEventListener('click', () => { state.pendingImei=''; state.pendingPhone=''; clearOtpInputs(); showStep('phone'); });
+
+  // OTP inputs UX
+  const inputs = getOtpInputs();
+  inputs.forEach((inp, idx) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g, '').slice(0,1);
+      if (inp.value && idx < inputs.length - 1) inputs[idx+1].focus();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !inp.value && idx > 0) {
+        inputs[idx-1].focus();
+      }
+      if (e.key === 'ArrowLeft' && idx > 0) inputs[idx-1].focus();
+      if (e.key === 'ArrowRight' && idx < inputs.length - 1) inputs[idx+1].focus();
+    });
+    inp.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (text && /\d{4,6}/.test(text)) {
+        e.preventDefault();
+        const digits = text.replace(/\D/g, '').slice(0,6).split('');
+        inputs.forEach((el, i) => { el.value = digits[i] || ''; });
+        (inputs[digits.length-1] || inputs[inputs.length-1]).focus();
+      }
+    });
+  });
 
   // Pause/resume auto-refresh when tab visibility changes
   document.addEventListener('visibilitychange', () => {
@@ -392,7 +489,18 @@ function initUI() {
     }
   });
 
+  // Online/offline indicator for auth flow
+  window.addEventListener('offline', () => {
+    const authStatus = document.getElementById('authStatus');
+    if (authStatus) authStatus.textContent = 'You are offline';
+  });
+  window.addEventListener('online', () => {
+    const authStatus = document.getElementById('authStatus');
+    if (authStatus) authStatus.textContent = '';
+  });
+
   updateAuthUI();
+  showStep(getCreds() ? 'code' : 'phone');
   if (getCreds()) loadDevices();
 }
 

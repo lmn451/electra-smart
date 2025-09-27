@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -13,36 +13,64 @@
 
     <div class="auth-panel" id="authPanel">
       <h2>Sign in</h2>
-      <label>
-        Phone
-        <input type="tel" id="phoneInput" placeholder="+972..." />
-      </label>
-      <button id="sendOtpBtn">Send code</button>
-      <label>
-        IMEI
-        <input type="text" id="imeiOutput" readonly />
-      </label>
-      <label>
-        Code
-        <input type="text" id="codeInput" inputmode="numeric" placeholder="123456" />
-      </label>
-      <label>
-        <input type="checkbox" id="rememberChk" /> Remember me
-      </label>
-      <div>
-        <button id="verifyBtn" class="btn primary">Verify</button>
+
+      <div class="auth-step" id="stepPhone">
+        <label>
+          Phone
+          <input type="tel" id="phoneInput" placeholder="05XXXXXXXX" inputmode="tel" autocomplete="tel" />
+        </label>
+        <button id="sendOtpBtn" class="btn primary">Send code</button>
+      </div>
+
+      <div class="auth-step hidden" id="stepCode">
+        <p class="muted">Enter the 6-digit code sent to <strong id="phoneEcho"></strong></p>
+        <div class="otp-grid" role="group" aria-label="One-time code">
+          <input id="otp-1" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" />
+          <input id="otp-2" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+          <input id="otp-3" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+          <input id="otp-4" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+          <input id="otp-5" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+          <input id="otp-6" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+        </div>
+        <input type="text" id="imeiOutput" readonly class="visually-hidden" aria-hidden="true" tabindex="-1" />
+        <div class="auth-row">
+          <label class="remember">
+            <input type="checkbox" id="rememberChk" /> Remember me
+          </label>
+        </div>
+        <div class="auth-actions">
+          <button id="verifyBtn" class="btn primary">Verify</button>
+          <button id="resendBtn" class="btn secondary" disabled>Resend</button>
+          <span id="resendCountdown" class="muted"></span>
+        </div>
+        <div class="auth-links">
+          <button id="editPhoneLink" class="linklike" type="button">Edit phone</button>
+        </div>
+      </div>
+
+      <div class="auth-actions hidden" id="logoutRow">
         <button id="logoutBtn" class="btn secondary">Logout</button>
       </div>
+
       <span id="authStatus" class="status"></span>
     </div>
 
-    <div class="toolbar">
+    <div class="toolbar hidden" id="toolbar">
       <button id="refresh">Refresh All</button>
       <label>
         <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
       </label>
       <label>
-        every <input type="number" id="autoRefreshSec" value="5" min="5" max="300" step="5" /> sec
+        every
+        <input
+          type="number"
+          id="autoRefreshSec"
+          value="5"
+          min="5"
+          max="300"
+          step="5"
+        />
+        sec
       </label>
       <span id="autoStatus" class="status"></span>
       <span id="statusLine" class="status"></span>
@@ -52,8 +80,10 @@
 
     <script src="./app.js"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').catch(console.error);
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/service-worker.js")
+          .catch(console.error);
       }
     </script>
   </body>
