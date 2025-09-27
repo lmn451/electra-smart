@@ -37,10 +37,11 @@
 
   function startAutoRefresh() {
     stopAutoRefresh()
-    const sec = Math.max(1, Number($autoSec) || 5)
-    if (!$autoEnabled) return
+    const sec = Math.max(1, Number(get(autoSec)) || 5)
+    if (!get(autoEnabled)) return
     intervalId = setInterval(() => {
-      $devicesStore.forEach(d => refreshDevice(d.id))
+      const list = get(devicesStore) || []
+      list.forEach(d => refreshDevice(d.id))
     }, sec * 1000)
   }
 

@@ -17,14 +17,14 @@
   <div class="toolbar">
     <button on:click={() => window.dispatchEvent(new CustomEvent('reload-devices'))}>Refresh All</button>
     <label>
-      <input type="checkbox" bind:checked={$autoEnabled}> Auto-refresh
+      <input type="checkbox" bind:checked={$autoEnabled} aria-label="Toggle auto refresh"> Auto-refresh
     </label>
     <label>
       every
-      <input type="number" bind:value={$autoSec} min="5" max="300" step="5" />
+      <input type="number" bind:value={$autoSec} min="5" max="300" step="5" aria-label="Auto refresh interval in seconds" />
       sec
     </label>
-    <span class="status">{$statusLine}</span>
+    <span class="status" role="status" aria-live="polite">{$statusLine}</span>
   </div>
   <Devices />
 {/if}

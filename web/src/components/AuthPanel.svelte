@@ -1,52 +1,53 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { creds, statusLine } from '../stores.js'
   import { startOtp, verifyOtp, setCreds } from '../lib/api.js'
+  import OtpInput from './OtpInput.svelte'
 
   const dispatch = createEventDispatcher()
 
   let phone = ''
   let imei = ''
-  let code = ['', '', '', '', '', '']
+  let otp = ''
   let remember = false
   let step = 'phone'
   let resendSec = 30
   let resendTimerId = null
-
-  function codeString() { return code.join('').replace(/\D/g, '') }
+  let resendRemaining = 0
 
   function startResendTimer() {
     stopResendTimer()
-    let remaining = resendSec
-    const tick = () => {
-      remaining -= 1
-      if (remaining <= 0) stopResendTimer()
-      else resendText = `You can resend in ${remaining}s`
-    }
-    resendText = `You can resend in ${remaining}s`
-    resendTimerId = setInterval(tick, 1000)
+    resendRemaining = resendSec
+    resendTimerId = setInterval(() => {
+      resendRemaining -= 1
+      if (resendRemaining <= 0) stopResendTimer()
+    }, 1000)
   }
 
   function stopResendTimer() {
     if (resendTimerId) clearInterval(resendTimerId)
     resendTimerId = null
-    resendText = ''
+    resendRemaining = 0
   }
 
-  let resendText = ''
   let sending = false
   let verifying = false
 
+  function normalizePhone(p) {
+    return (p || '').trim()
+  }
+
   async function onSendOtp(isResend = false) {
-    if (!phone) { statusLine.set('Enter phone number'); return }
+    const p = normalizePhone(phone)
+    if (!p) { statusLine.set('Enter phone number'); return }
     sending = true
     try {
       const payloadImei = isResend && imei ? imei : undefined
-      const res = await startOtp(phone, payloadImei)
+      const res = await startOtp(p, payloadImei)
       imei = res?.imei || ''
       if (!imei) throw new Error('No IMEI returned')
       statusLine.set('Code sent')
-      code = ['', '', '', '', '', '']
+      otp = ''
       step = 'code'
       startResendTimer()
     } catch (e) {
@@ -57,11 +58,11 @@
   }
 
   async function onVerify() {
-    const c = codeString()
-    if (!phone || !imei || !c) { statusLine.set('Enter phone and full code'); return }
+    const code = (otp || '').replace(/\D/g, '')
+    if (!phone || !imei || code.length !== 4) { statusLine.set('Enter the 4-digit code'); return }
     verifying = true
     try {
-      const res = await verifyOtp(imei, phone, c)
+      const res = await verifyOtp(imei, normalizePhone(phone), code)
       if (!res?.token) throw new Error('No token returned')
       setCreds({ imei, token: res.token }, !!remember)
       creds.set({ imei, token: res.token })
@@ -76,7 +77,7 @@
 
   function editPhone() {
     imei = ''
-    code = ['', '', '', '', '', '']
+    otp = ''
     step = 'phone'
   }
 </script>
@@ -88,17 +89,15 @@
     <div class="auth-step">
       <label>
         Phone
-        <input type="tel" bind:value={phone} placeholder="05XXXXXXXX" inputmode="tel" autocomplete="tel" />
+        <input type="tel" bind:value={phone} placeholder="05XXXXXXXX" inputmode="tel" autocomplete="tel" aria-label="Phone number" />
       </label>
       <button class="btn primary" on:click={() => onSendOtp(false)} disabled={sending}>Send code</button>
     </div>
   {:else}
     <div class="auth-step">
-      <p class="muted">Enter the 6-digit code sent to <strong>{phone}</strong></p>
-      <div class="otp-grid" role="group" aria-label="One-time code">
-        {#each [0,1,2,3,4,5] as i}
-          <input bind:value={code[i]} inputmode="numeric" pattern="[0-9]*" maxlength="1" />
-        {/each}
+      <p class="muted">Enter the 4-digit code sent to <strong>{phone}</strong></p>
+      <div class="otp-grid" aria-label="One-time code">
+        <OtpInput bind:value={otp} length={4} on:complete={onVerify} disabled={verifying} />
       </div>
       <div class="auth-row">
         <label class="remember">
@@ -106,9 +105,11 @@
         </label>
       </div>
       <div class="auth-actions">
-        <button class="btn primary" on:click={onVerify} disabled={verifying}>Verify</button>
-        <button class="btn secondary" on:click={() => onSendOtp(true)} disabled={!!resendTimerId}>Resend</button>
-        <span class="muted">{resendText}</span>
+        <button class="btn primary" on:click={onVerify} disabled={verifying || otp.length !== 4}>Verify</button>
+        <button class="btn secondary" on:click={() => onSendOtp(true)} disabled={!!resendTimerId} aria-disabled={!!resendTimerId}>
+          Resend
+        </button>
+        <span class="muted">{#if resendRemaining > 0}You can resend in {resendRemaining}s{/if}</span>
       </div>
       <div class="auth-links">
         <button class="linklike" type="button" on:click={editPhone}>Edit phone</button>

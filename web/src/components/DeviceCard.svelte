@@ -19,6 +19,8 @@
 
   let mode='', fan='', temp=''
 
+  let working = false
+
   async function apply() {
     const body = { ac_id: id }
     if (mode) body.mode = mode
@@ -29,21 +31,27 @@
       return
     }
     try {
+      working = true
       await applyCommand(body)
       statusLine.set(`Applied to ${id}`)
       await refresh()
     } catch (e) {
       statusLine.set(`Apply error for ${id}: ${e.message}`)
+    } finally {
+      working = false
     }
   }
 
   async function power(on) {
     try {
+      working = true
       await togglePower(id, on)
       statusLine.set(`Power ${on ? 'On' : 'Off'} sent to ${id}`)
       await refresh()
     } catch (e) {
       statusLine.set(`Power toggle error for ${id}: ${e.message}`)
+    } finally {
+      working = false
     }
   }
 </script>
@@ -60,7 +68,8 @@
     <div class="kv"><span class="k">Current</span><span id={`cur-${id}`}>{fields?.current ?? '—'}</span></div>
   </div>
   <div class="controls">
-    <select bind:value={mode}>
+    <label class="visually-hidden" for={`modeSel-${id}`}>Mode</label>
+    <select id={`modeSel-${id}`} bind:value={mode} aria-label="Mode">
       <option value="">Mode…</option>
       <option value="STBY">STBY (Standby)</option>
       <option value="COOL">COOL</option>
@@ -70,7 +79,8 @@
       <option value="AUTO">AUTO</option>
     </select>
 
-    <select bind:value={fan}>
+    <label class="visually-hidden" for={`fanSel-${id}`}>Fan speed</label>
+    <select id={`fanSel-${id}`} bind:value={fan} aria-label="Fan speed">
       <option value="">Fan…</option>
       <option value="LOW">LOW</option>
       <option value="MED">MED</option>
@@ -79,16 +89,16 @@
     </select>
 
     <div class="tempctl">
-      <button class="btn" on:click={() => temp = String(Math.max(10, Number(temp||24) - 1))}>−</button>
-      <input type="number" bind:value={temp} min="10" max="35" step="1" placeholder="Temp °C" />
-      <button class="btn" on:click={() => temp = String(Math.min(35, Number(temp||24) + 1))}>+</button>
+      <button class="btn" on:click={() => temp = String(Math.max(10, Number(temp||24) - 1))} aria-label="Decrease setpoint">−</button>
+      <input type="number" bind:value={temp} min="10" max="35" step="1" placeholder="Temp °C" aria-label="Setpoint temperature in Celsius" />
+      <button class="btn" on:click={() => temp = String(Math.min(35, Number(temp||24) + 1))} aria-label="Increase setpoint">+</button>
     </div>
 
-    <button class="btn primary" on:click={apply}>Apply</button>
-    <button class="btn secondary" on:click={refresh}>Refresh</button>
+    <button class="btn primary" on:click={apply} disabled={working}> {working ? 'Applying…' : 'Apply'} </button>
+    <button class="btn secondary" on:click={refresh} disabled={working}>Refresh</button>
   </div>
   <div class="actions">
-    <button class="btn" on:click={() => power(true)}>Power On</button>
-    <button class="btn" on:click={() => power(false)}>Power Off</button>
+    <button class="btn" on:click={() => power(true)} disabled={working}>Power On</button>
+    <button class="btn" on:click={() => power(false)} disabled={working}>Power Off</button>
   </div>
 </div>
