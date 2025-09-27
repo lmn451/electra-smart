@@ -1,4 +1,4 @@
-# Copy to app/.dev.vars and fill with your real values
-ELECTRA_IMEI=2b950000XXXXXXXX
-ELECTRA_TOKEN=XXXXXXXXXXXXXXXXX
-ELECTRA_ALLOW_AUTH_ENDPOINTS=false
+# This app no longer uses server-side Electra credentials.
+# IMEI and Token are obtained via OTP in the client and sent as headers:
+#   X-Electra-IMEI and X-Electra-Token
+# No variables are required here for local development.

@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Electra Control API (Cloudflare Pages)
+  version: 0.2.0
+servers:
+  - url: /
+components:
+  securitySchemes:
+    ElectraIMEI:
+      type: apiKey
+      in: header
+      name: X-Electra-IMEI
+    ElectraToken:
+      type: apiKey
+      in: header
+      name: X-Electra-Token
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        res_desc:
+          type: string
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+    Device:
+      type: object
+      description: Upstream Electra device object (shape may vary)
+      additionalProperties: true
+    Status:
+      type: object
+      description: Parsed telemetry with commandJson fields parsed where possible
+      additionalProperties: true
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /api/auth/start:
+    post:
+      summary: Start OTP flow (SEND_OTP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, example: "+972501234567" }
+      responses:
+        '200':
+          description: IMEI generated and OTP sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imei: { type: string, example: "2b95000012345678" }
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/auth/verify:
+    post:
+      summary: Verify OTP and obtain token (CHECK_OTP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [imei, phone, code]
+              properties:
+                imei: { type: string, example: "2b95000012345678" }
+                phone: { type: string, example: "+972501234567" }
+                code: { type: string, example: "123456" }
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imei: { type: string }
+                  token: { type: string }
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/devices:
+    get:
+      summary: List devices
+      security:
+        - ElectraIMEI: []
+          ElectraToken: []
+      responses:
+        '200':
+          description: Array of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '401':
+          description: Missing credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/status/{ac_id}:
+    get:
+      summary: Get status for a device
+      security:
+        - ElectraIMEI: []
+          ElectraToken: []
+      parameters:
+        - in: path
+          name: ac_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Parsed status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/command:
+    post:
+      summary: Apply one or more OPER changes to a device (merged server-side)
+      security:
+        - ElectraIMEI: []
+          ElectraToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ac_id]
+              properties:
+                ac_id: { type: string }
+                mode: { type: string, enum: [STBY, COOL, FAN, DRY, HEAT, AUTO] }
+                fan: { type: string, enum: [LOW, MED, HIGH, AUTO] }
+                temperature: { type: integer, minimum: 10, maximum: 35 }
+                ac_stsrc: { type: string }
+                shabat: { type: string }
+                sleep: { type: string }
+                ifeel: { type: string }
+      responses:
+        '200':
+          description: Upstream response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/power:
+    post:
+      summary: Toggle device power using TURN_ON_OFF or AC_MODE fallback
+      security:
+        - ElectraIMEI: []
+          ElectraToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ac_id, on]
+              properties:
+                ac_id: { type: string }
+                on: { type: boolean }
+      responses:
+        '200':
+          description: Upstream response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Missing credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Upstream error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

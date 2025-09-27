@@ -10,6 +10,32 @@
   </head>
   <body>
     <h1>Electra Control</h1>
+
+    <div class="auth-panel" id="authPanel">
+      <h2>Sign in</h2>
+      <label>
+        Phone
+        <input type="tel" id="phoneInput" placeholder="+972..." />
+      </label>
+      <button id="sendOtpBtn">Send code</button>
+      <label>
+        IMEI
+        <input type="text" id="imeiOutput" readonly />
+      </label>
+      <label>
+        Code
+        <input type="text" id="codeInput" inputmode="numeric" placeholder="123456" />
+      </label>
+      <label>
+        <input type="checkbox" id="rememberChk" /> Remember me
+      </label>
+      <div>
+        <button id="verifyBtn" class="btn primary">Verify</button>
+        <button id="logoutBtn" class="btn secondary">Logout</button>
+      </div>
+      <span id="authStatus" class="status"></span>
+    </div>
+
     <div class="toolbar">
       <button id="refresh">Refresh All</button>
       <label>

@@ -1,9 +1,11 @@
-// Minimal vanilla UI logic adapted to /api endpoints
+// Minimal vanilla UI logic adapted to /api endpoints with header-based auth
 const endpoints = {
   listDevices: '/api/devices',
   deviceStatus: (id) => `/api/status/${encodeURIComponent(id)}`,
   sendCommand: '/api/command',
   power: '/api/power',
+  authStart: '/api/auth/start',
+  authVerify: '/api/auth/verify',
 };
 
 const state = {
@@ -12,11 +14,44 @@ const state = {
   timerId: null,
   autoSec: 5,
   autoEnabled: true,
+  pendingImei: '',
 };
 
+const CREDS_KEY = 'electraCreds';
+
+function getCreds() {
+  try {
+    const s = sessionStorage.getItem(CREDS_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  try {
+    const l = localStorage.getItem(CREDS_KEY);
+    if (l) return JSON.parse(l);
+  } catch {}
+  return null;
+}
+
+function setCreds(creds, remember) {
+  clearCreds();
+  const json = JSON.stringify(creds);
+  if (remember) localStorage.setItem(CREDS_KEY, json);
+  else sessionStorage.setItem(CREDS_KEY, json);
+}
+
+function clearCreds() {
+  sessionStorage.removeItem(CREDS_KEY);
+  localStorage.removeItem(CREDS_KEY);
+}
+
 async function apiFetch(url, options = {}) {
+  const creds = getCreds();
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (url.startsWith('/api/') && creds) {
+    headers['X-Electra-IMEI'] = creds.imei;
+    headers['X-Electra-Token'] = creds.token;
+  }
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     cache: 'no-cache',
     ...options,
   });
@@ -50,6 +85,14 @@ function setAutoStatus(text) {
   if (elAuto) elAuto.textContent = text || '';
 }
 
+function updateAuthUI() {
+  const panel = document.getElementById('authPanel');
+  const creds = getCreds();
+  if (panel) panel.classList.toggle('hidden', !!creds);
+  const authStatus = document.getElementById('authStatus');
+  if (authStatus) authStatus.textContent = creds ? `Signed in (IMEI ${creds.imei})` : 'Not signed in';
+}
+
 function updateAutoRefreshUI() {
   const chk = document.getElementById('autoRefreshChk');
   const secInput = document.getElementById('autoRefreshSec');
@@ -68,6 +111,10 @@ function updateAutoRefreshUI() {
 async function loadDevices() {
   const container = document.getElementById('devices');
   container.innerHTML = '';
+  if (!getCreds()) {
+    setStatusLine('Sign in to view devices');
+    return;
+  }
   setStatusLine('Loading devices…');
   try {
     const devices = await apiFetch(endpoints.listDevices);
@@ -274,9 +321,51 @@ function applyAutoRefresh(enabled, sec) {
   updateAutoRefreshUI();
 }
 
+async function sendOtp() {
+  const phoneInput = document.getElementById('phoneInput');
+  const imeiOutput = document.getElementById('imeiOutput');
+  const authStatus = document.getElementById('authStatus');
+  const phone = (phoneInput?.value || '').trim();
+  if (!phone) { authStatus.textContent = 'Enter phone number'; return; }
+  try {
+    const res = await apiFetch(endpoints.authStart, { method: 'POST', body: JSON.stringify({ phone }) });
+    const imei = res?.imei;
+    if (!imei) throw new Error('No IMEI returned');
+    state.pendingImei = imei;
+    if (imeiOutput) imeiOutput.value = imei;
+    authStatus.textContent = 'Code sent';
+  } catch (e) {
+    authStatus.textContent = `Send failed: ${e.message}`;
+  }
+}
+
+async function verifyOtp() {
+  const phoneInput = document.getElementById('phoneInput');
+  const imeiOutput = document.getElementById('imeiOutput');
+  const codeInput = document.getElementById('codeInput');
+  const rememberChk = document.getElementById('rememberChk');
+  const authStatus = document.getElementById('authStatus');
+  const phone = (phoneInput?.value || '').trim();
+  const code = (codeInput?.value || '').trim();
+  const imei = (imeiOutput?.value || state.pendingImei || '').trim();
+  if (!phone || !code || !imei) { authStatus.textContent = 'Enter phone, IMEI and code'; return; }
+  try {
+    const res = await apiFetch(endpoints.authVerify, { method: 'POST', body: JSON.stringify({ imei, phone, code }) });
+    const token = res?.token;
+    if (!token) throw new Error('No token');
+    setCreds({ imei, token }, !!rememberChk?.checked);
+    updateAuthUI();
+    authStatus.textContent = 'Signed in';
+    await loadDevices();
+  } catch (e) {
+    authStatus.textContent = `Verify failed: ${e.message}`;
+  }
+}
+
 function initUI() {
   const refreshBtn = document.getElementById('refresh');
   if (refreshBtn) refreshBtn.addEventListener('click', loadDevices);
+
   const chk = document.getElementById('autoRefreshChk');
   const secInput = document.getElementById('autoRefreshSec');
   if (chk && secInput) {
@@ -285,6 +374,14 @@ function initUI() {
     // Start auto-refresh immediately based on current UI state
     applyAutoRefresh(chk.checked, Number(secInput.value || 5));
   }
+
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const verifyBtn = document.getElementById('verifyBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (sendOtpBtn) sendOtpBtn.addEventListener('click', sendOtp);
+  if (verifyBtn) verifyBtn.addEventListener('click', verifyOtp);
+  if (logoutBtn) logoutBtn.addEventListener('click', () => { clearCreds(); updateAuthUI(); setStatusLine('Signed out'); });
+
   // Pause/resume auto-refresh when tab visibility changes
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -294,7 +391,9 @@ function initUI() {
       applyAutoRefresh(true, state.autoSec);
     }
   });
-  loadDevices();
+
+  updateAuthUI();
+  if (getCreds()) loadDevices();
 }
 
 window.addEventListener('DOMContentLoaded', initUI);

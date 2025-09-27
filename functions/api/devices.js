@@ -1,14 +1,18 @@
 import { listDevices } from './_lib/electra.js';
 
-export const onRequestGet = async ({ env }) => {
+const JSON_HEADERS = { 'content-type': 'application/json' };
+
+export const onRequestGet = async ({ request }) => {
   try {
-    if (!env.ELECTRA_IMEI || !env.ELECTRA_TOKEN) {
-      return new Response(JSON.stringify({ error: 'server_not_configured', message: 'Set ELECTRA_IMEI and ELECTRA_TOKEN' }), { status: 500, headers: { 'content-type': 'application/json' } });
+    const imei = request.headers.get('X-Electra-IMEI');
+    const token = request.headers.get('X-Electra-Token');
+    if (!imei || !token) {
+      return new Response(JSON.stringify({ error: 'missing_credentials' }), { status: 401, headers: JSON_HEADERS });
     }
-    const devices = await listDevices(env);
-    return new Response(JSON.stringify(devices), { headers: { 'content-type': 'application/json' } });
+    const devices = await listDevices({ imei, token });
+    return new Response(JSON.stringify(devices), { headers: JSON_HEADERS });
   } catch (e) {
     const body = { error: 'upstream_error', res_desc: e?.res_desc || e?.message || String(e) };
-    return new Response(JSON.stringify(body), { status: 502, headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify(body), { status: 502, headers: JSON_HEADERS });
   }
 };
