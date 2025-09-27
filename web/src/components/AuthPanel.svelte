@@ -107,9 +107,10 @@
       <div class="auth-actions">
         <button class="btn primary" on:click={onVerify} disabled={verifying || otp.length !== 4}>Verify</button>
         <button class="btn secondary" on:click={() => onSendOtp(true)} disabled={!!resendTimerId} aria-disabled={!!resendTimerId}>
-          Resend
+            {#if !!resendRemaining }You can resend in {resendRemaining}s
+             {:else}Resend
+                {/if}
         </button>
-        <span class="muted">{#if resendRemaining > 0}You can resend in {resendRemaining}s{/if}</span>
       </div>
       <div class="auth-links">
         <button class="linklike" type="button" on:click={editPhone}>Edit phone</button>

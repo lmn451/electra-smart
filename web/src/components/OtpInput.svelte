@@ -3,7 +3,6 @@
   export let length = 4;
   export let disabled = false;
   export let autoFocus = true;
-  export let name = "otp";
   export let ariaLabelPrefix = "OTP digit";
 
   // Expose the combined value
@@ -82,7 +81,6 @@
 
 <style>
   .otp-cell {
-    width: 100%;
     max-width: 48px;
     text-align: center;
     font-size: 24px;
