@@ -1,3 +1,4 @@
+/* Global styles, adapted from the existing app */
 :root{--bg:#0b0d10;--fg:#e6eaf0;--muted:#9aa4b2;--card:#14181d;--border:#232a32;--accent:#4fc3f7;--ok:#3ddc97;--warn:#ffb020;--err:#ff6b6b}
 html,body{height:100%}
 body{padding:20px;-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
@@ -18,7 +19,7 @@ h1{margin:0 0 1rem 0;font-size:1.5rem}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
 .kv{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px dashed var(--border);padding:.25rem 0}
 .kv .k{color:var(--muted)}
-.controls{display:flex;flex-direction:column;gap:.75rem}
+.controls{display:grid;grid-template-columns:1fr;gap:.5rem}
 .controls select,.controls input,.controls button{padding:.45rem .6rem;border-radius:.5rem;border:1px solid var(--border);background:#101418;color:var(--fg)}
 .controls button{cursor:pointer}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
@@ -27,68 +28,29 @@ h1{margin:0 0 1rem 0;font-size:1.5rem}
 .btn.primary{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .empty{color:var(--muted);font-style:italic;padding:1rem}
 .pre{background:#0f1317;color:#d8dee9;border:1px solid var(--border);border-radius:.5rem;padding:.5rem;white-space:pre-wrap;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:12px}
-/* Mobile-first touch targets and temperature control */
 select,input[type="number"],button{min-height:44px;font-size:16px;touch-action:manipulation}
 .tempctl{display:grid;grid-template-columns:1fr auto 1fr;gap:.4rem}
-
-.seg-control{display:flex;border-radius:.5rem;border:1px solid var(--border);overflow:hidden}
-.seg-control button{flex:1;border:none;background:var(--card);color:var(--muted);padding:.5rem;font-size:.8rem;border-radius:0;min-height:40px}
-.seg-control button.active{background:var(--accent);color:var(--bg);font-weight:700}
-
-.card.pending{opacity:.6;pointer-events:none}
-.card .error-banner{background:var(--err);color:var(--bg);font-size:.9rem;padding:.4rem .8rem;border-radius:.5rem;margin-top:.5rem;display:none}
-.card.error .error-banner{display:block}
-
-/* Responsive enhancements */
 @media (min-width:640px){
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .controls{grid-template-columns:1fr 1fr}
   .actions{display:flex}
 }
- @media (min-width:1024px){
-   .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
- }
- @media (min-width:960px){
-   .controls{grid-template-columns:1fr 1fr 1fr auto auto}
- }
-
- /* Auth panel */
- .hidden { display: none }
- .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap }
- .muted { color: var(--muted); font-size: .9rem }
- .linklike { background: none; color: var(--accent); border: none; padding: .25rem .4rem; cursor: pointer }
-
- .auth-panel.hidden { display: none }
- .auth-panel {
-   padding: 1rem;
-   border: 1px solid var(--border);
-   border-radius: .75rem;
-   background: var(--card);
-   display: grid;
-   gap: .75rem;
-   max-width: 480px;
-   margin: 1rem auto;
- }
- .auth-step { gap: .6rem }
- .auth-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem }
- .auth-actions { display: flex; gap: .5rem; flex-wrap: wrap }
- .auth-actions .btn { flex: 1 1 auto }
- .remember { color: var(--muted) }
-
- .auth-panel input[type="tel"],
- .auth-panel input[placeholder="123456"],
- .auth-panel .otp-grid input,
- .auth-panel input[type="text"] {
-   width: 100%;
-   padding: .8rem;
-   border: 1px solid var(--border);
-   border-radius: .5rem;
-   background: #101418;
-   color: var(--fg);
-   font-size: 18px;
-   text-align: left;
- }
- .auth-panel .otp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: .5rem }
- .auth-panel .otp-grid input { text-align: center; font-size: 24px; padding: .8rem 0 }
-
- .auth-panel label { gap: .4rem; margin: .5rem 0 }
+@media (min-width:1024px){
+  .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:960px){
+  .controls{grid-template-columns:1fr 1fr 1fr auto auto}
+}
+.hidden { display: none }
+.visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap }
+.muted { color: var(--muted); font-size: .9rem }
+.linklike { background: none; color: var(--accent); border: none; padding: .25rem .4rem; cursor: pointer }
+.auth-panel.hidden { display: none }
+.auth-panel { padding: 1rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--card); display: grid; gap: .75rem; max-width: 480px; margin: 1rem auto; }
+.auth-step { gap: .6rem }
+.auth-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem }
+.auth-actions { display: flex; gap: .5rem; flex-wrap: wrap }
+.auth-actions .btn { flex: 1 1 auto }
+.remember { color: var(--muted) }
+.auth-panel .otp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: .5rem }
+.auth-panel .otp-grid input { text-align: center; font-size: 24px; padding: .8rem 0 }
