@@ -4,77 +4,68 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Electra Control</title>
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <h1>Electra Control</h1>
-
-    <div class="auth-panel" id="authPanel">
-      <h2>Sign in</h2>
-
-      <div class="auth-step" id="stepPhone">
-        <label>
-          Phone
-          <input type="tel" id="phoneInput" placeholder="05XXXXXXXX" inputmode="tel" autocomplete="tel" />
-        </label>
-        <button id="sendOtpBtn" class="btn primary">Send code</button>
-      </div>
-
-      <div class="auth-step hidden" id="stepCode">
-        <p class="muted">Enter the 4-digit code sent to <strong id="phoneEcho"></strong></p>
-        <div class="otp-grid" role="group" aria-label="One-time code">
-          <input id="otp-1" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" />
-          <input id="otp-2" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
-          <input id="otp-3" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
-          <input id="otp-4" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
-        </div>
-        <input type="text" id="imeiOutput" readonly class="visually-hidden" aria-hidden="true" tabindex="-1" />
-        <div class="auth-row">
-          <label class="remember">
-            <input type="checkbox" id="rememberChk" /> Remember me
-          </label>
-        </div>
-        <div class="auth-actions">
-          <button id="verifyBtn" class="btn primary">Verify</button>
-          <button id="resendBtn" class="btn secondary" disabled>Resend</button>
-          <span id="resendCountdown" class="muted"></span>
-        </div>
-        <div class="auth-links">
-          <button id="editPhoneLink" class="linklike" type="button">Edit phone</button>
-        </div>
-      </div>
+    <main>
+      <h1>Electra Control</h1>
 
       <div class="auth-actions hidden" id="logoutRow">
         <button id="logoutBtn" class="btn secondary">Logout</button>
       </div>
 
-      <span id="authStatus" class="status"></span>
-    </div>
+      <div class="auth-panel" id="authPanel">
+        <h2>Sign in</h2>
 
-    <div class="toolbar hidden" id="toolbar">
-      <button id="refresh">Refresh All</button>
-      <label>
-        <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
-      </label>
-      <label>
-        every
-        <input
-          type="number"
-          id="autoRefreshSec"
-          value="5"
-          min="5"
-          max="300"
-          step="5"
-        />
-        sec
-      </label>
-      <span id="autoStatus" class="status"></span>
-      <span id="statusLine" class="status"></span>
-    </div>
+        <div class="auth-step" id="stepPhone">
+          <label for="phoneInput">Phone</label>
+          <input type="tel" id="phoneInput" placeholder="05XXXXXXXX" inputmode="tel" autocomplete="tel" />
+          <button id="sendOtpBtn" class="btn primary">Send code</button>
+        </div>
 
-    <div id="devices" class="cards"></div>
+        <div class="auth-step hidden" id="stepCode">
+          <p class="muted">Enter the 4-digit code sent to <strong id="phoneEcho"></strong></p>
+          <div class="otp-grid" role="group" aria-label="One-time code">
+            <input id="otp-1" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" />
+            <input id="otp-2" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+            <input id="otp-3" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+            <input id="otp-4" inputmode="numeric" pattern="[0-9]*" maxlength="1" />
+          </div>
+          <input type="text" id="imeiOutput" readonly class="visually-hidden" aria-hidden="true" tabindex="-1" />
+          <div class="auth-row">
+            <label class="remember">
+              <input type="checkbox" id="rememberChk" /> Remember me
+            </label>
+          </div>
+          <div class="auth-actions">
+            <button id="verifyBtn" class="btn primary">Verify</button>
+            <button id="resendBtn" class="btn secondary" disabled>Resend</button>
+            <span id="resendCountdown" class="muted"></span>
+          </div>
+          <div class="auth-links">
+            <button id="editPhoneLink" class="linklike" type="button">Edit phone</button>
+          </div>
+        </div>
+
+
+
+        <span id="authStatus" class="status"></span>
+      </div>
+
+      <div class="toolbar hidden" id="toolbar">
+        <button id="refresh">Refresh All</button>
+        <label>
+          <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
+        </label>
+
+        <span id="autoStatus" class="status"></span>
+        <span id="statusLine" class="status"></span>
+      </div>
+
+      <div id="devices" class="cards"></div>
+    </main>
 
     <script src="./app.js"></script>
     <script>
