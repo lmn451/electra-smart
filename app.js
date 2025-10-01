@@ -8,6 +8,8 @@ const endpoints = {
 };
 
 const state = {
+  loggedIn: false,
+  deviceData: null,
   devices: [],
   statusMap: new Map(),
   timerId: null,
@@ -40,11 +42,14 @@ function setCreds(creds, remember) {
   const json = JSON.stringify(creds);
   if (remember) localStorage.setItem(CREDS_KEY, json);
   else sessionStorage.setItem(CREDS_KEY, json);
+  state.loggedIn = true;
 }
 
 function clearCreds() {
   sessionStorage.removeItem(CREDS_KEY);
   localStorage.removeItem(CREDS_KEY);
+  state.loggedIn = false;
+  state.deviceData = null;
 }
 
 // --- API Fetch --- //
@@ -66,7 +71,7 @@ async function apiFetch(url, options = {}) {
   });
   if (res.status === 401) {
     clearCreds();
-    updateAuthUI();
+    updateUIState();
     showStep("phone");
     setStatusLine("Authentication failed. Please sign in again.", true);
     throw new Error("Authentication failed");
@@ -111,19 +116,20 @@ function setAutoStatus(text) {
   if (elAuto) elAuto.textContent = text || "";
 }
 
-function updateAuthUI() {
-  const panel = document.getElementById("authPanel");
-  const logoutRow = document.getElementById("logoutRow");
-  const toolbar = document.getElementById("toolbar");
-  const creds = getCreds();
-  if (panel) panel.classList.toggle("hidden", !!creds);
-  if (logoutRow) logoutRow.classList.toggle("hidden", !creds);
-  if (toolbar) toolbar.classList.toggle("hidden", !creds);
+function updateUIState() {
+  const loginPanel = document.getElementById("loginPanel");
+  const controlsPanel = document.getElementById("controlsPanel");
+  if (loginPanel) loginPanel.classList.toggle("hidden", state.loggedIn);
+  if (controlsPanel) controlsPanel.classList.toggle("hidden", !state.loggedIn);
+
   const authStatus = document.getElementById("authStatus");
-  if (authStatus)
-    authStatus.textContent = creds
-      ? `Signed in (IMEI ${creds.imei})`
-      : "Not signed in";
+  if (authStatus) {
+    authStatus.textContent = state.loggedIn ? "Signed in" : "Not signed in";
+  }
+
+  if (state.loggedIn && state.deviceData) {
+    renderDeviceCards(state.deviceData);
+  }
 }
 
 function showStep(step) {
@@ -197,24 +203,38 @@ function updateAutoRefreshUI() {
 // --- Device Logic --- //
 
 async function loadDevices() {
+  const loadingEl = document.getElementById("controlsLoading");
   const container = document.getElementById("devices");
-  container.innerHTML = '<div class="loading-spinner"></div>';
+  if (loadingEl) loadingEl.classList.remove("hidden");
+  if (container) container.innerHTML = "";
   if (!getCreds()) {
     setStatusLine("Sign in to view devices", true);
+    if (loadingEl) loadingEl.classList.add("hidden");
     return;
   }
   setStatusLine("Loading devices…");
   try {
     const devices = await apiFetch(endpoints.listDevices);
-    state.devices = Array.isArray(devices) ? devices : devices.devices || [];
+    state.deviceData = Array.isArray(devices) ? devices : devices.devices || [];
+    state.devices = state.deviceData;
+    if (state.deviceData.length === 0) {
+      console.warn("No devices found");
+    } else if (state.deviceData.length > 1) {
+      console.warn(
+        `Multiple devices found: ${state.deviceData.length}. Rendering all.`
+      );
+    }
     renderDeviceCards(state.devices);
     await Promise.all(state.devices.map((d) => refreshDevice(d.id)));
     setStatusLine("");
   } catch (e) {
     if (e.message !== "Authentication failed") {
       setStatusLine("Failed to load devices", true);
-      container.innerHTML = `<div class="empty">Failed to load devices: ${e.message}</div>`;
+      if (container)
+        container.innerHTML = `<div class="empty">Failed to load devices: ${e.message}</div>`;
     }
+  } finally {
+    if (loadingEl) loadingEl.classList.add("hidden");
   }
 }
 
@@ -496,6 +516,9 @@ function applyAutoRefresh(enabled) {
 // --- Initialization --- //
 
 function initUI() {
+  state.loggedIn = !!getCreds();
+  updateUIState();
+
   const refreshBtn = document.getElementById("refresh");
   if (refreshBtn) refreshBtn.addEventListener("click", loadDevices);
 
@@ -516,7 +539,7 @@ function initUI() {
   if (logoutBtn)
     logoutBtn.addEventListener("click", () => {
       clearCreds();
-      updateAuthUI();
+      updateUIState();
       setStatusLine("Signed out");
       showStep("phone");
     });
@@ -572,11 +595,10 @@ function initUI() {
   );
   window.addEventListener("online", () => setStatusLine(""));
 
-  updateAuthUI();
-  if (getCreds()) {
-    loadDevices();
-  } else {
+  if (!state.loggedIn) {
     showStep("phone");
+  } else {
+    loadDevices();
   }
 }
 
@@ -638,7 +660,8 @@ async function verifyOtp() {
     const token = res?.token;
     if (!token) throw new Error("No token");
     setCreds({ imei, token }, !!rememberChk?.checked);
-    updateAuthUI();
+    state.loggedIn = true;
+    updateUIState();
     if (authStatus) authStatus.textContent = "Signed in";
     await loadDevices();
   } catch (e) {
