@@ -118,7 +118,7 @@ function showStep(step) {
 }
 
 function getOtpInputs() {
-  return [1,2,3,4,5,6].map(i => document.getElementById(`otp-${i}`)).filter(Boolean);
+  return [1,2,3,4].map(i => document.getElementById(`otp-${i}`)).filter(Boolean);
 }
 
 function clearOtpInputs() {
@@ -437,10 +437,10 @@ function initUI() {
   const chk = document.getElementById('autoRefreshChk');
   const secInput = document.getElementById('autoRefreshSec');
   if (chk && secInput) {
-    chk.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 5)));
-    secInput.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 5)));
+    chk.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 60)));
+    secInput.addEventListener('change', () => applyAutoRefresh(chk.checked, Number(secInput.value || 60)));
     // Start auto-refresh immediately based on current UI state
-    applyAutoRefresh(chk.checked, Number(secInput.value || 5));
+    applyAutoRefresh(chk.checked, Number(secInput.value || 60));
   }
 
   const sendOtpBtn = document.getElementById('sendOtpBtn');
