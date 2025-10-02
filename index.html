@@ -99,14 +99,6 @@
                 maxlength="1"
               />
             </div>
-            <input
-              type="text"
-              id="imeiOutput"
-              readonly
-              class="visually-hidden"
-              aria-hidden="true"
-              tabindex="-1"
-            />
             <div class="auth-row">
               <label class="remember">
                 <input type="checkbox" id="rememberChk" /> Remember me
@@ -130,25 +122,23 @@
         </div>
       </div>
 
-      <div id="controlsPanel" class="panel hidden">
-        <div class="auth-actions hidden" id="logoutRow">
-          <button id="logoutBtn" class="btn secondary">Logout</button>
-        </div>
-
-        <div id="controlsLoading" class="loading-spinner hidden"></div>
-
-        <div class="toolbar hidden" id="toolbar">
-          <button id="refresh">Refresh All</button>
-          <label>
-            <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
-          </label>
-
-          <span id="autoStatus" class="status"></span>
-          <span id="statusLine" class="status"></span>
-        </div>
-
-        <div id="devices" class="cards"></div>
+      <div class="auth-actions hidden" id="logoutRow">
+        <button id="logoutBtn" class="btn secondary">Logout</button>
       </div>
+
+      <div id="controlsLoading" class="loading-spinner hidden"></div>
+
+      <div class="toolbar hidden" id="toolbar">
+        <button id="refresh">Refresh All</button>
+        <label>
+          <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
+        </label>
+
+        <span id="autoStatus" class="status"></span>
+        <span id="statusLine" class="status"></span>
+      </div>
+
+      <div id="devices" class="cards"></div>
     </main>
 
     <script src="./app.js"></script>

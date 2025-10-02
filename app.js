@@ -125,6 +125,7 @@ function showPhone() {
   if (stepPhone) stepPhone.classList.remove("hidden");
   if (controlsPanel) controlsPanel.classList.add("hidden");
   if (stepOtp) stepOtp.classList.add("hidden");
+  document.getElementById("devices")?.classList.add("hidden");
   const loginPanel = document.getElementById("loginPanel");
   loginPanel.classList.remove("hidden");
   const authStatus = document.getElementById("authStatus");
@@ -138,6 +139,7 @@ function showOtp() {
   const controlsPanel = document.getElementById("controlsPanel");
   const stepOtp = document.getElementById("stepCode");
   const loginPanel = document.getElementById("loginPanel");
+  document.getElementById("devices")?.classList.add("hidden");
   loginPanel.classList.remove("hidden");
   if (stepPhone) stepPhone.classList.add("hidden");
   if (controlsPanel) controlsPanel.classList.add("hidden");
@@ -155,6 +157,7 @@ function showPanel() {
   const stepOtp = document.getElementById("stepOtp");
   const loginPanel = document.getElementById("loginPanel");
   loginPanel.classList.add("hidden");
+  document.getElementById("devices")?.classList.remove("hidden");
   if (stepPhone) stepPhone.classList.add("hidden");
   if (controlsPanel) controlsPanel.classList.remove("hidden");
   if (stepOtp) stepOtp.classList.add("hidden");
@@ -683,6 +686,7 @@ async function sendOtp(isResend = false) {
     if (authStatus) authStatus.textContent = "Enter phone number";
     return;
   }
+  document.getElementById("phoneEcho")?.innerText = phone;
   if (sendBtn) sendBtn.disabled = true;
   if (resendBtn) resendBtn.disabled = true;
   try {
