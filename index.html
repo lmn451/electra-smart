@@ -4,7 +4,28 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Electra Control</title>
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Control your Electra air conditioning units remotely with this smart home PWA" />
+    <meta name="keywords" content="electra, air conditioning, smart home, pwa, remote control" />
+
+    <!-- PWA Theme Colors -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="msapplication-TileColor" content="#0f172a" />
+
+    <!-- Apple iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Electra" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
+
+    <!-- Standard Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+
+    <!-- Manifest and Styles -->
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -116,7 +137,40 @@
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker
           .register("/service-worker.js")
-          .catch(console.error);
+          .then((registration) => {
+            console.log("Service Worker registered successfully");
+
+            // Handle service worker updates
+            registration.addEventListener("updatefound", () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener("statechange", () => {
+                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                    // New version available, show update prompt
+                    if (confirm("A new version of Electra Control is available. Update now?")) {
+                      newWorker.postMessage({ action: "skipWaiting" });
+                      window.location.reload();
+                    }
+                  }
+                });
+              }
+            });
+          })
+          .catch((error) => {
+            console.error("Service Worker registration failed:", error);
+          });
+
+        // Listen for service worker messages
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.action === "reload") {
+            window.location.reload();
+          }
+        });
+
+        // Handle service worker controller changes
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          window.location.reload();
+        });
       }
     </script>
   </body>

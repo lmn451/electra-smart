@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Electra Control - Offline</title>
+    <meta name="description" content="Electra Control is currently offline" />
+
+    <!-- PWA Theme Colors -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="msapplication-TileColor" content="#0f172a" />
+
+    <!-- Apple iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Electra" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <div class="panel">
+        <div class="auth-panel">
+          <h1>📱 Electra Control</h1>
+
+          <div style="text-align: center; padding: 2rem 0;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">📶</div>
+            <h2>You're offline</h2>
+            <p class="muted" style="margin-bottom: 2rem;">
+              Electra Control needs an internet connection to manage your devices.
+              Please check your connection and try again.
+            </p>
+
+            <div class="auth-actions">
+              <button
+                class="btn primary"
+                onclick="window.location.reload()"
+                style="width: 100%;"
+              >
+                Try Again
+              </button>
+            </div>
+
+            <div style="margin-top: 2rem;">
+              <p class="muted" style="font-size: 0.8rem;">
+                This app works offline for basic navigation, but requires internet for device control.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Check if we're back online
+      window.addEventListener('online', () => {
+        window.location.href = '/';
+      });
+
+      // Add some basic retry logic
+      const retryButton = document.querySelector('.btn');
+      retryButton.addEventListener('click', () => {
+        if (navigator.onLine) {
+          window.location.href = '/';
+        } else {
+          window.location.reload();
+        }
+      });
+    </script>
+  </body>
+</html>

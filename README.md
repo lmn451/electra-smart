@@ -2,6 +2,20 @@
 
 PWA front-end + Cloudflare Pages Functions backend for Electra Smart control.
 
+## 📱 Progressive Web App Features
+
+✨ **Full PWA Experience:**
+- 📥 **Install directly from browser** - No app store required
+- 🌐 **Works offline** - App shell loads instantly even without internet
+- 📲 **Native app experience** - Runs full-screen like a native mobile app
+- 🔄 **Automatic updates** - Background updates with user-friendly prompts
+- 🎨 **Platform optimized** - iOS, Android, and desktop integration
+
+🚀 **Quick Installation:**
+- Chrome/Edge: Click the install button in the address bar
+- Safari iOS: Share → "Add to Home Screen"
+- All browsers: Look for "📱 Install App" button in the app toolbar
+
 Key changes:
 - OTP-based vendor auth is supported directly in the app.
 - No server-side credential fallback: every request must include X-Electra-IMEI and X-Electra-Token headers (the client manages these via OTP).

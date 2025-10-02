@@ -19,6 +19,8 @@ const state = {
   pendingPhone: "",
   resendTimerId: null,
   resendSec: 30,
+  deferredPrompt: null,
+  isInstalled: false,
 };
 
 const CREDS_KEY = "electraCreds";
@@ -227,6 +229,9 @@ async function loadDevices() {
     renderDeviceCards(state.devices);
     await Promise.all(state.devices.map((d) => refreshDevice(d.id)));
     setStatusLine("");
+
+    // Show install button if available
+    showInstallButton();
   } catch (e) {
     if (e.message !== "Authentication failed") {
       setStatusLine("Failed to load devices", true);
@@ -595,6 +600,26 @@ function initUI() {
   );
   window.addEventListener("online", () => setStatusLine(""));
 
+  // PWA Install Prompt Handling
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    state.deferredPrompt = e;
+    showInstallButton();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    state.isInstalled = true;
+    state.deferredPrompt = null;
+    hideInstallButton();
+    setStatusLine("App installed successfully!", false);
+    setTimeout(() => setStatusLine(""), 3000);
+  });
+
+  // Check if already installed
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    state.isInstalled = true;
+  }
+
   if (!state.loggedIn) {
     showStep("phone");
   } else {
@@ -668,6 +693,70 @@ async function verifyOtp() {
     if (authStatus) authStatus.textContent = `Verify failed: ${e.message}`;
   } finally {
     if (verifyBtn) verifyBtn.disabled = false;
+  }
+}
+
+// PWA Install Functions
+function showInstallButton() {
+  let installBtn = document.getElementById("installBtn");
+  if (!installBtn && !state.isInstalled) {
+    const toolbar = document.getElementById("toolbar");
+    if (toolbar && !toolbar.classList.contains("hidden")) {
+      installBtn = document.createElement("button");
+      installBtn.id = "installBtn";
+      installBtn.innerHTML = "📱 Install App";
+      installBtn.className = "btn primary";
+      installBtn.style.fontSize = "0.9rem";
+      installBtn.addEventListener("click", installApp);
+      toolbar.appendChild(installBtn);
+    }
+  }
+}
+
+function hideInstallButton() {
+  const installBtn = document.getElementById("installBtn");
+  if (installBtn) {
+    installBtn.remove();
+  }
+}
+
+async function installApp() {
+  if (!state.deferredPrompt) return;
+
+  try {
+    state.deferredPrompt.prompt();
+    const { outcome } = await state.deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      setStatusLine("Installing app...", false);
+    } else {
+      setStatusLine("App installation cancelled", true);
+      setTimeout(() => setStatusLine(""), 3000);
+    }
+
+    state.deferredPrompt = null;
+    hideInstallButton();
+  } catch (error) {
+    console.error("Installation failed:", error);
+    setStatusLine("Installation failed", true);
+    setTimeout(() => setStatusLine(""), 3000);
+  }
+}
+
+// Enhanced offline handling
+function handleOfflineUI() {
+  const devices = document.getElementById("devices");
+  if (devices && !navigator.onLine) {
+    devices.innerHTML = `
+      <div class="empty">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">📶</div>
+        <p>You're currently offline</p>
+        <p class="muted">Device controls require an internet connection</p>
+        <button class="btn primary" onclick="window.location.reload()" style="margin-top: 1rem;">
+          Try Again
+        </button>
+      </div>
+    `;
   }
 }
 
