@@ -118,19 +118,51 @@ function setAutoStatus(text) {
   if (elAuto) elAuto.textContent = text || "";
 }
 
-function updateUIState() {
+function showPhone() {
   const loginPanel = document.getElementById("loginPanel");
   const controlsPanel = document.getElementById("controlsPanel");
-  if (loginPanel) loginPanel.classList.toggle("hidden", state.loggedIn);
-  if (controlsPanel) controlsPanel.classList.toggle("hidden", !state.loggedIn);
+  if (loginPanel) loginPanel.classList.remove("hidden");
+  if (controlsPanel) controlsPanel.add("hidden");
 
   const authStatus = document.getElementById("authStatus");
   if (authStatus) {
-    authStatus.textContent = state.loggedIn ? "Signed in" : "Not signed in";
+    authStatus.textContent = "Not signed in";
+  }
+}
+
+function showOtp() {
+  const loginPanel = document.getElementById("loginPanel");
+  const controlsPanel = document.getElementById("controlsPanel");
+  if (loginPanel) loginPanel.classList.remove("hidden");
+  if (controlsPanel) controlsPanel.classList.add("hidden");
+
+  const authStatus = document.getElementById("authStatus");
+  if (authStatus) {
+    authStatus.textContent = "Not signed in";
+  }
+}
+
+function showDevices() {
+  const loginPanel = document.getElementById("loginPanel");
+  const controlsPanel = document.getElementById("controlsPanel");
+  if (loginPanel) loginPanel.classList.add("hidden");
+  if (controlsPanel) controlsPanel.classList.remove("hidden");
+
+  const authStatus = document.getElementById("authStatus");
+  if (authStatus) {
+    authStatus.textContent = "Signed in";
   }
 
-  if (state.loggedIn && state.deviceData) {
+  if (state.deviceData) {
     renderDeviceCards(state.deviceData);
+  }
+}
+
+function updateUIState() {
+  if (state.loggedIn) {
+    showDevices();
+  } else {
+    showPhone();
   }
 }
 
