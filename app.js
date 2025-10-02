@@ -25,6 +25,18 @@ const state = {
 
 const CREDS_KEY = "electraCreds";
 
+const stepPhone = document.getElementById("stepPhone");
+const controlsPanel = document.getElementById("controlsPanel");
+const stepCode = document.getElementById("stepCode");
+const loginPanel = document.getElementById("loginPanel");
+const devicesContainer = document.getElementById("devices");
+const countdown = document.getElementById("resendCountdown");
+const phoneInput = document.getElementById("phoneInput");
+const authStatus = document.getElementById("authStatus");
+const phoneEcho = document.getElementById("phoneEcho");
+const sendBtn = document.getElementById("sendOtpBtn");
+const resendBtn = document.getElementById("resendBtn");
+
 // --- Authentication --- //
 
 function getCreds() {
@@ -74,7 +86,7 @@ async function apiFetch(url, options = {}) {
   if (res.status === 401) {
     clearCreds();
     updateUIState();
-    showStep("phone");
+    navigateTo("phone");
     setStatusLine("Authentication failed. Please sign in again.", true);
     throw new Error("Authentication failed");
   }
@@ -118,83 +130,54 @@ function setAutoStatus(text) {
   if (elAuto) elAuto.textContent = text || "";
 }
 
-function showPhone() {
-  const stepPhone = document.getElementById("stepPhone");
-  const controlsPanel = document.getElementById("controlsPanel");
-  const stepOtp = document.getElementById("stepCode");
-  if (stepPhone) stepPhone.classList.remove("hidden");
-  if (controlsPanel) controlsPanel.classList.add("hidden");
-  if (stepOtp) stepOtp.classList.add("hidden");
-  document.getElementById("devices")?.classList.add("hidden");
-  const loginPanel = document.getElementById("loginPanel");
-  loginPanel.classList.remove("hidden");
-  const authStatus = document.getElementById("authStatus");
-  if (authStatus) {
-    authStatus.textContent = "Not signed in";
-  }
-}
-
-function showOtp() {
-  const stepPhone = document.getElementById("stepPhone");
-  const controlsPanel = document.getElementById("controlsPanel");
-  const stepOtp = document.getElementById("stepCode");
-  const loginPanel = document.getElementById("loginPanel");
-  document.getElementById("devices")?.classList.add("hidden");
-  loginPanel.classList.remove("hidden");
+function navigateTo(view) {
+  // Hide all steps and panels initially
   if (stepPhone) stepPhone.classList.add("hidden");
   if (controlsPanel) controlsPanel.classList.add("hidden");
-  if (stepOtp) stepOtp.classList.remove("hidden");
+  if (stepCode) stepCode.classList.add("hidden");
+  if (loginPanel) loginPanel.classList.add("hidden");
+  if (devicesContainer) devicesContainer.classList.add("hidden");
+  const phoneInput = document.getElementById("phoneInput");
+  const firstOtp = document.getElementById("otp-1");
 
-  const authStatus = document.getElementById("authStatus");
-  if (authStatus) {
-    authStatus.textContent = "Not signed in";
-  }
-}
+  switch (view) {
+    case "phone":
+      if (stepPhone) stepPhone.classList.remove("hidden");
+      if (loginPanel) loginPanel.classList.remove("hidden");
+      if (authStatus) authStatus.textContent = "Not signed in";
+      if (phoneInput) phoneInput.focus();
+      break;
 
-function showPanel() {
-  const stepPhone = document.getElementById("stepPhone");
-  const controlsPanel = document.getElementById("controlsPanel");
-  const stepOtp = document.getElementById("stepOtp");
-  const loginPanel = document.getElementById("loginPanel");
-  loginPanel.classList.add("hidden");
-  document.getElementById("devices")?.classList.remove("hidden");
-  if (stepPhone) stepPhone.classList.add("hidden");
-  if (controlsPanel) controlsPanel.classList.remove("hidden");
-  if (stepOtp) stepOtp.classList.add("hidden");
-  const authStatus = document.getElementById("authStatus");
-  if (authStatus) {
-    authStatus.textContent = "Signed in";
-  }
+    case "otp":
+      if (stepCode) stepCode.classList.remove("hidden");
+      if (loginPanel) loginPanel.classList.remove("hidden");
+      if (authStatus) authStatus.textContent = "Not signed in";
+      if (firstOtp) firstOtp.focus();
+      break;
 
-  if (state.deviceData) {
-    renderDeviceCards(state.deviceData);
+    case "panel":
+      if (controlsPanel) controlsPanel.classList.remove("hidden");
+      if (devicesContainer) devicesContainer.classList.remove("hidden");
+      if (authStatus) authStatus.textContent = "Signed in";
+      if (state.deviceData) {
+        renderDeviceCards(state.deviceData);
+      }
+      break;
+
+    default:
+      console.warn(`Unknown view: ${view}`);
   }
 }
 
 function updateUIState() {
   if (state.loggedIn) {
-    showPanel();
+    navigateTo("panel");
   } else {
-    showPhone();
+    navigateTo("phone");
   }
 }
 
-function showStep(step) {
-  const stepPhone = document.getElementById("stepPhone");
-  const stepCode = document.getElementById("stepCode");
-  if (!stepPhone || !stepCode) return;
-  if (step === "phone") {
-    stepPhone.classList.remove("hidden");
-    stepCode.classList.add("hidden");
-    const inp = document.getElementById("phoneInput");
-    if (inp) inp.focus();
-  } else {
-    stepPhone.classList.add("hidden");
-    stepCode.classList.remove("hidden");
-    const first = document.getElementById("otp-1");
-    if (first) first.focus();
-  }
-}
+// showStep is now obsolete and replaced by navigateTo
 
 function getOtpInputs() {
   return [1, 2, 3, 4]
@@ -215,8 +198,6 @@ function readOtpValue() {
 }
 
 function startResendTimer() {
-  const countdown = document.getElementById("resendCountdown");
-  const resendBtn = document.getElementById("resendBtn");
   let remaining = state.resendSec;
   if (resendBtn) resendBtn.disabled = true;
   if (countdown) countdown.textContent = `You can resend in ${remaining}s`;
@@ -591,14 +572,14 @@ function initUI() {
       clearCreds();
       updateUIState();
       setStatusLine("Signed out");
-      showStep("phone");
+      navigateTo("phone");
     });
   if (editPhoneLink)
     editPhoneLink.addEventListener("click", () => {
       state.pendingImei = "";
       state.pendingPhone = "";
       clearOtpInputs();
-      showStep("phone");
+      navigateTo("phone");
     });
 
   const inputs = getOtpInputs();
@@ -669,24 +650,19 @@ function initUI() {
   }
 
   if (!state.loggedIn) {
-    showStep("phone");
+    navigateTo("phone");
   } else {
     loadDevices();
   }
 }
 
 async function sendOtp(isResend = false) {
-  const phoneInput = document.getElementById("phoneInput");
-  const authStatus = document.getElementById("authStatus");
-  const phoneEcho = document.getElementById("phoneEcho");
-  const sendBtn = document.getElementById("sendOtpBtn");
-  const resendBtn = document.getElementById("resendBtn");
   const phone = (phoneInput?.value || state.pendingPhone || "").trim();
   if (!phone) {
     if (authStatus) authStatus.textContent = "Enter phone number";
     return;
   }
-  document.getElementById("phoneEcho")?.innerText = phone;
+  if (phoneEcho) phoneEcho.innerText = phone;
   if (sendBtn) sendBtn.disabled = true;
   if (resendBtn) resendBtn.disabled = true;
   try {
@@ -705,7 +681,7 @@ async function sendOtp(isResend = false) {
     if (authStatus) authStatus.textContent = "Code sent";
     if (phoneEcho) phoneEcho.textContent = phone;
     clearOtpInputs();
-    showStep("code");
+    navigateTo("otp");
     startResendTimer();
   } catch (e) {
     if (authStatus) authStatus.textContent = `Send failed: ${e.message}`;
