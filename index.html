@@ -4,8 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Electra Control</title>
-    <meta name="description" content="Control your Electra air conditioning units remotely with this smart home PWA" />
-    <meta name="keywords" content="electra, air conditioning, smart home, pwa, remote control" />
+    <meta
+      name="description"
+      content="Control your Electra air conditioning units remotely with this smart home PWA"
+    />
+    <meta
+      name="keywords"
+      content="electra, air conditioning, smart home, pwa, remote control"
+    />
 
     <!-- PWA Theme Colors -->
     <meta name="theme-color" content="#0f172a" />
@@ -13,7 +19,10 @@
 
     <!-- Apple iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="Electra" />
 
     <!-- Apple Touch Icons -->
@@ -22,8 +31,18 @@
     <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
 
     <!-- Standard Icons -->
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="./icons/icon-192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="./icons/icon-512.png"
+    />
 
     <!-- Manifest and Styles -->
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -145,9 +164,16 @@
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener("statechange", () => {
-                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
                     // New version available, show update prompt
-                    if (confirm("A new version of Electra Control is available. Update now?")) {
+                    if (
+                      confirm(
+                        "A new version of Electra Control is available. Update now?"
+                      )
+                    ) {
                       newWorker.postMessage({ action: "skipWaiting" });
                       window.location.reload();
                     }

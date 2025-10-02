@@ -119,11 +119,14 @@ function setAutoStatus(text) {
 }
 
 function showPhone() {
-  const loginPanel = document.getElementById("loginPanel");
+  const stepPhone = document.getElementById("stepPhone");
   const controlsPanel = document.getElementById("controlsPanel");
-  if (loginPanel) loginPanel.classList.remove("hidden");
-  if (controlsPanel) controlsPanel.add("hidden");
-
+  const stepOtp = document.getElementById("stepCode");
+  if (stepPhone) stepPhone.classList.remove("hidden");
+  if (controlsPanel) controlsPanel.classList.add("hidden");
+  if (stepOtp) stepOtp.classList.add("hidden");
+  const loginPanel = document.getElementById("loginPanel");
+  loginPanel.classList.remove("hidden");
   const authStatus = document.getElementById("authStatus");
   if (authStatus) {
     authStatus.textContent = "Not signed in";
@@ -131,10 +134,14 @@ function showPhone() {
 }
 
 function showOtp() {
-  const loginPanel = document.getElementById("loginPanel");
+  const stepPhone = document.getElementById("stepPhone");
   const controlsPanel = document.getElementById("controlsPanel");
-  if (loginPanel) loginPanel.classList.remove("hidden");
+  const stepOtp = document.getElementById("stepCode");
+  const loginPanel = document.getElementById("loginPanel");
+  loginPanel.classList.remove("hidden");
+  if (stepPhone) stepPhone.classList.add("hidden");
   if (controlsPanel) controlsPanel.classList.add("hidden");
+  if (stepOtp) stepOtp.classList.remove("hidden");
 
   const authStatus = document.getElementById("authStatus");
   if (authStatus) {
@@ -142,12 +149,15 @@ function showOtp() {
   }
 }
 
-function showDevices() {
-  const loginPanel = document.getElementById("loginPanel");
+function showPanel() {
+  const stepPhone = document.getElementById("stepPhone");
   const controlsPanel = document.getElementById("controlsPanel");
-  if (loginPanel) loginPanel.classList.add("hidden");
+  const stepOtp = document.getElementById("stepOtp");
+  const loginPanel = document.getElementById("loginPanel");
+  loginPanel.classList.add("hidden");
+  if (stepPhone) stepPhone.classList.add("hidden");
   if (controlsPanel) controlsPanel.classList.remove("hidden");
-
+  if (stepOtp) stepOtp.classList.add("hidden");
   const authStatus = document.getElementById("authStatus");
   if (authStatus) {
     authStatus.textContent = "Signed in";
@@ -160,7 +170,7 @@ function showDevices() {
 
 function updateUIState() {
   if (state.loggedIn) {
-    showDevices();
+    showPanel();
   } else {
     showPhone();
   }
@@ -426,7 +436,7 @@ function mapStatusFields(s) {
   const cj = s?.commandJson || {};
   const operoper = cj?.OPER?.OPER || {};
   const diag = cj?.DIAG_L2?.DIAG_L2 || {};
-  const hasFlag = Object.prototype.hasOwnProperty.call(operoper, "TURN_ON_OFF");
+  const hasFlag = Object.hasOwn(operoper, "TURN_ON_OFF");
   const isOn = hasFlag
     ? operoper.TURN_ON_OFF !== "OFF"
     : operoper.AC_MODE !== "STBY";
@@ -488,9 +498,9 @@ async function applyChanges(id) {
   const fanSel = document.getElementById(`fanSel-${id}`);
   const tempInput = document.getElementById(`temp-${id}`);
   const body = { ac_id: id };
-  if (modeSel && modeSel.value) body.mode = modeSel.value;
-  if (fanSel && fanSel.value) body.fan = fanSel.value;
-  if (tempInput && tempInput.value) body.temperature = Number(tempInput.value);
+  if (modeSel?.value) body.mode = modeSel.value;
+  if (fanSel?.value) body.fan = fanSel.value;
+  if (tempInput?.value) body.temperature = Number(tempInput.value);
   if (!body.mode && !body.fan && body.temperature === undefined) {
     setStatusLine("Nothing to apply");
     return;
@@ -648,7 +658,10 @@ function initUI() {
   });
 
   // Check if already installed
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+  if (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone
+  ) {
     state.isInstalled = true;
   }
 
