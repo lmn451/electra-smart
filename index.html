@@ -16,6 +16,7 @@
     <!-- PWA Theme Colors -->
     <meta name="theme-color" content="#0f172a" />
     <meta name="msapplication-TileColor" content="#0f172a" />
+    <meta name="msapplication-config" content="./icons/browserconfig.xml" />
 
     <!-- Apple iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -26,11 +27,25 @@
     <meta name="apple-mobile-web-app-title" content="Electra" />
 
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
 
     <!-- Standard Icons -->
+    <link rel="icon" type="image/x-icon" href="./icons/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="./icons/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="./icons/favicon-32x32.png"
+    />
     <link
       rel="icon"
       type="image/png"
@@ -43,6 +58,33 @@
       sizes="512x512"
       href="./icons/icon-512.png"
     />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="72x72"
+      href="./icons/icon-72x72.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      href="./icons/icon-96x96.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="128x128"
+      href="./icons/icon-128x128.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="144x144"
+      href="./icons/icon-144x144.png"
+    />
+
+    <!-- Windows Tile Icon -->
+    <meta name="msapplication-TileImage" content="./icons/mstile-150x150.png" />
 
     <!-- Manifest and Styles -->
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -130,11 +172,6 @@
 
       <div class="toolbar hidden" id="toolbar">
         <button id="refresh">Refresh All</button>
-        <label>
-          <input type="checkbox" id="autoRefreshChk" checked /> Auto-refresh
-        </label>
-
-        <span id="autoStatus" class="status"></span>
         <span id="statusLine" class="status"></span>
       </div>
 

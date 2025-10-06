@@ -12,9 +12,8 @@ const state = {
   deviceData: null,
   devices: [],
   statusMap: new Map(),
-  timerId: null,
-  autoSec: 60,
-  autoEnabled: true,
+  pendingById: new Map(),
+  optimisticById: new Map(), // key -> { desired: { isOn?, mode?, fan?, spt? }, until: epochMs }
   pendingImei: "",
   pendingPhone: "",
   resendTimerId: null,
@@ -125,11 +124,6 @@ function setStatusLine(text, isError = false) {
   }
 }
 
-function setAutoStatus(text) {
-  const elAuto = document.getElementById("autoStatus");
-  if (elAuto) elAuto.textContent = text || "";
-}
-
 function navigateTo(view) {
   // Hide all steps and panels initially
   if (stepPhone) stepPhone.classList.add("hidden");
@@ -137,6 +131,7 @@ function navigateTo(view) {
   if (stepCode) stepCode.classList.add("hidden");
   if (loginPanel) loginPanel.classList.add("hidden");
   if (devicesContainer) devicesContainer.classList.add("hidden");
+  const toolbar = document.getElementById("toolbar");
   const phoneInput = document.getElementById("phoneInput");
   const firstOtp = document.getElementById("otp-1");
 
@@ -146,6 +141,7 @@ function navigateTo(view) {
       if (loginPanel) loginPanel.classList.remove("hidden");
       if (authStatus) authStatus.textContent = "Not signed in";
       if (phoneInput) phoneInput.focus();
+      if (toolbar) toolbar.classList.add("hidden");
       break;
 
     case "otp":
@@ -153,12 +149,14 @@ function navigateTo(view) {
       if (loginPanel) loginPanel.classList.remove("hidden");
       if (authStatus) authStatus.textContent = "Not signed in";
       if (firstOtp) firstOtp.focus();
+      if (toolbar) toolbar.classList.add("hidden");
       break;
 
     case "panel":
       if (controlsPanel) controlsPanel.classList.remove("hidden");
       if (devicesContainer) devicesContainer.classList.remove("hidden");
       if (authStatus) authStatus.textContent = "Signed in";
+      if (toolbar) toolbar.classList.remove("hidden");
       if (state.deviceData) {
         renderDeviceCards(state.deviceData);
       }
@@ -213,19 +211,6 @@ function startResendTimer() {
       if (countdown) countdown.textContent = `You can resend in ${remaining}s`;
     }
   }, 1000);
-}
-
-function updateAutoRefreshUI() {
-  const chk = document.getElementById("autoRefreshChk");
-  if (chk) chk.checked = !!state.autoEnabled;
-  const running = !!state.timerId;
-  if (!state.autoEnabled) {
-    setAutoStatus("Auto-refresh: Off");
-  } else if (!running) {
-    setAutoStatus("Auto-refresh: Paused");
-  } else {
-    setAutoStatus(`Auto-refresh: On (${state.autoSec}s)`);
-  }
 }
 
 // --- Device Logic --- //
@@ -295,64 +280,76 @@ function renderDeviceCards(devices) {
         "div",
         { class: "header" },
         el("div", { class: "title", text: title }),
-        el("div", { class: "badge", id: `badge-${id}` }, "—")
+        el(
+          "div",
+          { class: "header-right" },
+el("div", { class: "badge", id: `badge-${id}` }, "—")
+        )
       ),
       el(
         "div",
         { class: "grid" },
-        el(
-          "div",
-          { class: "kv" },
+        el("div", { class: "kv" },
           el("span", { class: "k", text: "Mode" }),
           el("span", { id: `mode-${id}`, text: "—" })
         ),
-        el(
-          "div",
-          { class: "kv" },
+        el("div", { class: "kv" },
           el("span", { class: "k", text: "Fan" }),
           el("span", { id: `fan-${id}`, text: "—" })
         ),
-        el(
-          "div",
-          { class: "kv" },
+        el("div", { class: "kv" },
           el("span", { class: "k", text: "Setpoint" }),
           el("span", { id: `spt-${id}`, text: "—" })
         ),
-        el(
-          "div",
-          { class: "kv" },
+        el("div", { class: "kv" },
           el("span", { class: "k", text: "Current" }),
           el("span", { id: `cur-${id}`, text: "—" })
         )
       ),
       el(
         "div",
-        { class: "controls" },
-        buildModeSelect(id),
-        buildFanSelect(id),
-        buildTempControl(id),
-        el("button", { id: `apply-${id}`, class: "btn primary" }, "Apply"),
-        el("button", { id: `refresh-${id}`, class: "btn secondary" }, "Refresh")
+        { class: "controls controls-erg" },
+        el(
+          "div",
+          { class: "controls-left" },
+          buildModeSelect(id),
+          buildFanSelect(id)
+        ),
+        buildTempControl(id)
       ),
-      el(
-        "div",
-        { class: "actions" },
-        el("button", { id: `power-on-${id}`, class: "btn" }, "Power On"),
-        el("button", { id: `power-off-${id}`, class: "btn" }, "Power Off")
-      )
+      el("div", { id: `status-indicator-${id}`, class: "status-indicator" })
     );
     container.appendChild(card);
 
-    document.getElementById(`refresh-${id}`).onclick = () => refreshDevice(id);
-    document.getElementById(`apply-${id}`).onclick = () => applyChanges(id);
-    document.getElementById(`power-on-${id}`).onclick = () =>
-      togglePower(id, true);
-    document.getElementById(`power-off-${id}`).onclick = () =>
-      togglePower(id, false);
+    const modeSel = document.getElementById(`modeSel-${id}`);
+    if (modeSel)
+      modeSel.addEventListener("change", () => onModeChange(id, modeSel.value));
+    const fanSel = document.getElementById(`fanSel-${id}`);
+    if (fanSel)
+      fanSel.addEventListener("change", () => onFanChange(id, fanSel.value));
+const pbtn = document.getElementById(`power-btn-${id}`);
+    if (pbtn) pbtn.addEventListener("click", () => onPowerToggle(id));
     const dec = document.getElementById(`tdec-${id}`);
     const inc = document.getElementById(`tinc-${id}`);
-    if (dec) dec.onclick = () => stepTemp(id, -1);
-    if (inc) inc.onclick = () => stepTemp(id, +1);
+if (dec)
+      dec.onclick = () => {
+        if (state.pendingById.get(String(id))) return;
+        stepTemp(id, -1);
+        applyTemp(id);
+      };
+if (inc)
+      inc.onclick = () => {
+        if (state.pendingById.get(String(id))) return;
+        stepTemp(id, +1);
+        applyTemp(id);
+      };
+    const tempInput = document.getElementById(`temp-${id}`);
+if (tempInput) {
+      tempInput.addEventListener("change", () => {
+        if (state.pendingById.get(String(id))) return;
+        applyTemp(id);
+      });
+    }
   });
 }
 
@@ -368,6 +365,8 @@ function buildModeSelect(id) {
     el("option", { value: "HEAT", text: "HEAT" }),
     el("option", { value: "AUTO", text: "AUTO" })
   );
+  // UI default only; will be replaced by actual status when known
+  sel.value = "DRY";
   return sel;
 }
 
@@ -381,34 +380,43 @@ function buildFanSelect(id) {
     el("option", { value: "HIGH", text: "HIGH" }),
     el("option", { value: "AUTO", text: "AUTO" })
   );
+  // UI default only; will be replaced by actual status when known
+  sel.value = "LOW";
   return sel;
 }
 
 function buildTempControl(id) {
+  const input = el("input", {
+    id: `temp-${id}`,
+    type: "number",
+    inputmode: "numeric",
+    placeholder: "Temp °C",
+    min: "10",
+    max: "35",
+    step: "1",
+    class: 'temp'
+  });
+  const incBtn = el("button", { id: `tinc-${id}`, class: "btn temp-inc" }, "+");
+  const decBtn = el("button", { id: `tdec-${id}`, class: "btn temp-dec" }, "−");
+  const vert = el("div", { class: "temp-vert" }, incBtn, decBtn);
+  const powerBtn = el("button", { id: `power-btn-${id}`, class: "btn power-btn power-under", "aria-pressed": "false", "aria-label": "Power" }, "⏻");
   const wrap = el(
     "div",
-    { class: "tempctl" },
-    el("button", { id: `tdec-${id}`, class: "btn" }, "−"),
-    el("input", {
-      id: `temp-${id}`,
-      type: "number",
-      inputmode: "numeric",
-      placeholder: "Temp °C",
-      min: "10",
-      max: "35",
-      step: "1",
-    }),
-    el("button", { id: `tinc-${id}`, class: "btn" }, "+")
+    { class: "right-thumb-controls" },
+    input,
+    incBtn,
+    decBtn,
+    powerBtn
   );
   return wrap;
 }
 
-async function refreshDevice(id) {
+async function refreshDevice(id, opts = {}) {
   try {
     const s = await apiFetch(endpoints.deviceStatus(id));
     const fields = mapStatusFields(s);
     state.statusMap.set(String(id), fields);
-    paintStatus(id, fields);
+    paintStatus(id, fields, opts);
   } catch (e) {
     if (e.message !== "Authentication failed") {
       setStatusLine(`Status error for ${id}: ${e.message}`, true);
@@ -447,24 +455,45 @@ function pickCurrentTemp(diagL2) {
   return null;
 }
 
-function paintStatus(id, fields) {
-  const bade = document.getElementById(`badge-${id}`);
-  if (bade) {
-    bade.textContent = fields.isOn ? "ON" : "OFF";
-    bade.classList.toggle("on", fields.isOn);
-    bade.classList.toggle("off", !fields.isOn);
-  }
-  const m = document.getElementById(`mode-${id}`);
-  if (m) m.textContent = fields.mode ?? "—";
-  const f = document.getElementById(`fan-${id}`);
-  if (f) f.textContent = fields.fan ?? "—";
-  const sp = document.getElementById(`spt-${id}`);
-  if (sp) sp.textContent = fields.spt ?? "—";
+function paintStatus(id, fields, opts = {}) {
   const cur = document.getElementById(`cur-${id}`);
   if (cur) cur.textContent = fields.current ?? "—";
-  const tempInput = document.getElementById(`temp-${id}`);
-  if (tempInput && !tempInput.value && fields.spt != null)
-    tempInput.value = String(fields.spt);
+
+  const optim = state.optimisticById.get(String(id));
+  const suppressControls = !!optim && !opts.forceControls;
+
+  if (!suppressControls) {
+    const bade = document.getElementById(`badge-${id}`);
+    if (bade) {
+      bade.textContent = fields.isOn ? "ON" : "OFF";
+      bade.classList.toggle("on", fields.isOn);
+      bade.classList.toggle("off", !fields.isOn);
+    }
+    const m = document.getElementById(`mode-${id}`);
+    if (m) m.textContent = fields.mode ?? "—";
+    const f = document.getElementById(`fan-${id}`);
+    if (f) f.textContent = fields.fan ?? "—";
+    const sp = document.getElementById(`spt-${id}`);
+    if (sp) sp.textContent = fields.spt ?? "—";
+
+    // Sync controls without triggering apply
+    const modeSel = document.getElementById(`modeSel-${id}`);
+    if (modeSel && fields.mode) modeSel.value = fields.mode;
+    const fanSel = document.getElementById(`fanSel-${id}`);
+    if (fanSel && fields.fan) {
+      const optsVals = Array.from(fanSel.options).map((o) => o.value);
+      fanSel.value = optsVals.includes(fields.fan) ? fields.fan : "";
+    }
+    const tempInput = document.getElementById(`temp-${id}`);
+    if (tempInput && fields.spt != null) tempInput.value = String(fields.spt);
+
+    // Sync power button visual state
+    const pbtn = document.getElementById(`power-btn-${id}`);
+    if (pbtn) {
+      pbtn.classList.toggle("on", !!fields.isOn);
+      pbtn.setAttribute("aria-pressed", fields.isOn ? "true" : "false");
+    }
+  }
 }
 
 function stepTemp(id, delta) {
@@ -477,72 +506,273 @@ function stepTemp(id, delta) {
   input.value = String(next);
 }
 
-async function applyChanges(id) {
-  const modeSel = document.getElementById(`modeSel-${id}`);
-  const fanSel = document.getElementById(`fanSel-${id}`);
-  const tempInput = document.getElementById(`temp-${id}`);
-  const body = { ac_id: id };
-  if (modeSel?.value) body.mode = modeSel.value;
-  if (fanSel?.value) body.fan = fanSel.value;
-  if (tempInput?.value) body.temperature = Number(tempInput.value);
-  if (!body.mode && !body.fan && body.temperature === undefined) {
-    setStatusLine("Nothing to apply");
-    return;
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function setCardStatus(id, status) {
+  const indicator = document.getElementById(`status-indicator-${id}`);
+  if (!indicator) return;
+  indicator.className = "status-indicator";
+  if (status === "updating") {
+    indicator.classList.add("status-updating");
+  } else if (status === "success") {
+    indicator.classList.add("status-success");
+    setTimeout(() => {
+      if (indicator.classList.contains("status-success")) {
+        indicator.classList.remove("status-success");
+      }
+    }, 2000);
+  } else if (status === "error") {
+    indicator.classList.add("status-error");
+    setTimeout(() => {
+      if (indicator.classList.contains("status-error")) {
+        indicator.classList.remove("status-error");
+      }
+    }, 3000);
   }
-  const applyBtn = document.getElementById(`apply-${id}`);
-  if (applyBtn) applyBtn.disabled = true;
+}
+
+function applyOptimisticUi(id, desired) {
+  const key = String(id);
+  setCardStatus(id, "updating");
+  // Update labels
+  if (desired.mode !== undefined) {
+    const mlabel = document.getElementById(`mode-${key}`);
+    if (mlabel) mlabel.textContent = desired.mode;
+    const msel = document.getElementById(`modeSel-${key}`);
+    if (msel) msel.value = desired.mode;
+  }
+  if (desired.fan !== undefined) {
+    const flabel = document.getElementById(`fan-${key}`);
+    if (flabel) flabel.textContent = desired.fan;
+    const fsel = document.getElementById(`fanSel-${key}`);
+    if (fsel) fsel.value = desired.fan;
+  }
+  if (desired.spt !== undefined) {
+    const splabel = document.getElementById(`spt-${key}`);
+    if (splabel) splabel.textContent = String(desired.spt);
+    const tinp = document.getElementById(`temp-${key}`);
+    if (tinp) tinp.value = String(desired.spt);
+  }
+  if (desired.isOn !== undefined) {
+    const bade = document.getElementById(`badge-${key}`);
+    if (bade) {
+      bade.textContent = desired.isOn ? "ON" : "OFF";
+      bade.classList.toggle("on", !!desired.isOn);
+      bade.classList.toggle("off", !desired.isOn);
+    }
+    const pbtn = document.getElementById(`power-btn-${key}`);
+    if (pbtn) {
+      pbtn.classList.toggle("on", !!desired.isOn);
+      pbtn.setAttribute("aria-pressed", desired.isOn ? "true" : "false");
+    }
+  }
+}
+
+function pollOptimistic(id) {
+  const key = String(id);
+  const entry = state.optimisticById.get(key);
+  if (!entry) return;
+
+  refreshDevice(id).then(() => {
+    const currentEntry = state.optimisticById.get(key);
+    if (!currentEntry) return; // already cleared
+
+    const f = state.statusMap.get(key);
+    const d = currentEntry.desired || {};
+    const matched =
+      (d.mode === undefined || f?.mode === d.mode) &&
+      (d.fan === undefined || f?.fan === d.fan) &&
+      (d.spt === undefined || f?.spt === d.spt) &&
+      (d.isOn === undefined || f?.isOn === d.isOn);
+
+    if (matched) {
+      // Success: state matches desired
+      state.optimisticById.delete(key);
+      setCardStatus(id, "success");
+      refreshDevice(id, { forceControls: true });
+      return;
+    }
+
+    const now = Date.now();
+    if (now >= currentEntry.until) {
+      // Timeout: state still doesn't match after 3s
+      state.optimisticById.delete(key);
+      setCardStatus(id, "error");
+      refreshDevice(id, { forceControls: true });
+      return;
+    }
+
+    // Keep polling
+    setTimeout(() => pollOptimistic(id), 400);
+  }).catch(() => {
+    const currentEntry = state.optimisticById.get(key);
+    if (!currentEntry) return;
+    const now = Date.now();
+    if (now >= currentEntry.until) {
+      state.optimisticById.delete(key);
+      setCardStatus(id, "error");
+      refreshDevice(id, { forceControls: true });
+    } else {
+      setTimeout(() => pollOptimistic(id), 400);
+    }
+  });
+}
+
+function startOptimistic(id, desired) {
+  const key = String(id);
+  const until = Date.now() + 3000; // 3s optimistic window
+  const prev = state.optimisticById.get(key);
+  const merged = { ...(prev?.desired || {}), ...desired };
+  state.optimisticById.set(key, { desired: merged, until });
+  applyOptimisticUi(id, merged);
+  pollOptimistic(id);
+}
+
+function setControlsDisabled(id, disabled) {
+  const ids = [
+    `modeSel-${id}`,
+    `fanSel-${id}`,
+    `temp-${id}`,
+    `tdec-${id}`,
+    `tinc-${id}`,
+`power-btn-${id}`,
+  ];
+  ids.forEach((domId) => {
+    const el = document.getElementById(domId);
+    if (el) el.disabled = !!disabled;
+  });
+}
+
+function onPowerToggle(id) {
+  if (state.pendingById.get(String(id))) return; // ignore re-entries or double events
+  const pbtn = document.getElementById(`power-btn-${id}`);
+  if (!pbtn) return;
+  const currentUIOn = pbtn.classList.contains("on");
+  const desired = !currentUIOn;
+  // Optimistic UI: flip immediately to give instant feedback; will be reconciled on refresh
+  pbtn.classList.toggle("on", desired);
+  pbtn.setAttribute("aria-pressed", desired ? "true" : "false");
+  return togglePower(id, desired);
+}
+
+async function directSend(id, partial) {
+  const key = String(id);
+  const fields = state.statusMap ? state.statusMap.get(key) : undefined;
+  const isModeChange = Object.prototype.hasOwnProperty.call(
+    partial || {},
+    "mode"
+  );
+  const needsPowerOn = !!(fields && fields.isOn === false && !isModeChange);
+
+  state.pendingById.set(String(id), true);
+  setControlsDisabled(id, true);
   try {
+    if (needsPowerOn) {
+      await apiFetch(endpoints.power, {
+        method: "POST",
+        body: JSON.stringify({ ac_id: id, on: true }),
+      });
+      // Set default mode to DRY when powering on
+      await apiFetch(endpoints.sendCommand, {
+        method: "POST",
+        body: JSON.stringify({ ac_id: id, mode: "DRY" }),
+      });
+    }
+
     await apiFetch(endpoints.sendCommand, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ac_id: id, ...partial }),
     });
-    setStatusLine(`Applied to ${id}`);
-    await refreshDevice(id);
+
+    // Optimistic UI for 3s, then reconcile to actual
+    const desired = {};
+    if (Object.prototype.hasOwnProperty.call(partial, "mode")) {
+      desired.mode = partial.mode;
+      if (partial.mode === "STBY") desired.isOn = false; else desired.isOn = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, "fan")) {
+      desired.fan = partial.fan;
+      if (needsPowerOn) {
+        desired.isOn = true;
+        desired.mode = "DRY";
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, "temperature")) {
+      desired.spt = partial.temperature;
+      if (needsPowerOn) {
+        desired.isOn = true;
+        desired.mode = "DRY";
+      }
+    }
+    startOptimistic(id, desired);
   } catch (e) {
     if (e.message !== "Authentication failed") {
       setStatusLine(`Apply error for ${id}: ${e.message}`, true);
     }
   } finally {
-    if (applyBtn) applyBtn.disabled = false;
+    state.pendingById.set(String(id), false);
+    setControlsDisabled(id, false);
   }
 }
 
+function onModeChange(id, mode) {
+  if (!mode) return;
+  return directSend(id, { mode });
+}
+
+function onFanChange(id, fan) {
+  if (!fan) return;
+  return directSend(id, { fan });
+}
+
+function applyTemp(id) {
+  if (state.pendingById.get(String(id))) return; // ignore while power/command in-flight
+  const tempInput = document.getElementById(`temp-${id}`);
+  if (!tempInput) return;
+  const n = parseInt(tempInput.value, 10);
+  if (!Number.isFinite(n)) return;
+  const min = Number(tempInput.min || 10);
+  const max = Number(tempInput.max || 35);
+  const clamped = Math.min(max, Math.max(min, n));
+  if (clamped !== n) tempInput.value = String(clamped);
+  return directSend(id, { temperature: clamped });
+}
+
 async function togglePower(id, turnOn) {
-  const powerBtn = document.getElementById(
-    `power-${turnOn ? "on" : "off"}-${id}`
-  );
+  const powerBtn = document.getElementById(`power-btn-${id}`);
+  state.pendingById.set(String(id), true);
   if (powerBtn) powerBtn.disabled = true;
   try {
     await apiFetch(endpoints.power, {
       method: "POST",
       body: JSON.stringify({ ac_id: id, on: turnOn }),
     });
+    // Set default mode to DRY when powering on
+    if (turnOn) {
+      await apiFetch(endpoints.sendCommand, {
+        method: "POST",
+        body: JSON.stringify({ ac_id: id, mode: "DRY" }),
+      });
+    }
     setStatusLine(`Power ${turnOn ? "On" : "Off"} sent to ${id}`);
-    await refreshDevice(id);
+    // Optimistic UI for 3s, then reconcile to actual
+    const desired = { isOn: !!turnOn };
+    if (turnOn) desired.mode = "DRY";
+    startOptimistic(id, desired);
   } catch (e) {
     if (e.message !== "Authentication failed") {
       setStatusLine(`Power toggle error for ${id}: ${e.message}`, true);
     }
   } finally {
+    state.pendingById.set(String(id), false);
     if (powerBtn) powerBtn.disabled = false;
   }
 }
 
 // --- Auto-Refresh --- //
-
-function applyAutoRefresh(enabled) {
-  if (state.timerId) {
-    clearInterval(state.timerId);
-    state.timerId = null;
-  }
-  state.autoEnabled = !!enabled;
-  if (state.autoEnabled) {
-    state.timerId = setInterval(() => {
-      state.devices.forEach((d) => refreshDevice(d.id));
-    }, state.autoSec * 1000);
-  }
-  updateAutoRefreshUI();
-}
+// Removed: no polling. Rely on one-time status fetch on mount and manual Refresh All.
 
 // --- Initialization --- //
 
@@ -552,12 +782,6 @@ function initUI() {
 
   const refreshBtn = document.getElementById("refresh");
   if (refreshBtn) refreshBtn.addEventListener("click", loadDevices);
-
-  const chk = document.getElementById("autoRefreshChk");
-  if (chk) {
-    chk.addEventListener("change", () => applyAutoRefresh(chk.checked));
-    applyAutoRefresh(chk.checked);
-  }
 
   const sendOtpBtn = document.getElementById("sendOtpBtn");
   const verifyBtn = document.getElementById("verifyBtn");
@@ -607,18 +831,6 @@ function initUI() {
         (inputs[digits.length - 1] || inputs[inputs.length - 1]).focus();
       }
     });
-  });
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      if (state.timerId) {
-        clearInterval(state.timerId);
-        state.timerId = null;
-      }
-      updateAutoRefreshUI();
-    } else if (state.autoEnabled) {
-      applyAutoRefresh(true);
-    }
   });
 
   window.addEventListener("offline", () =>
