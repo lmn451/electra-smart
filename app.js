@@ -283,7 +283,17 @@ function renderDeviceCards(devices) {
         el(
           "div",
           { class: "header-right" },
-el("div", { class: "badge", id: `badge-${id}` }, "—")
+          el("div", { class: "badge", id: `badge-${id}` }, "—"),
+          el(
+            "button",
+            {
+              id: `refresh-${id}`,
+              class: "icon-btn",
+              title: "Refresh device",
+              "aria-label": "Refresh device",
+            },
+            "↻"
+          )
         )
       ),
       el(
@@ -327,7 +337,9 @@ el("div", { class: "badge", id: `badge-${id}` }, "—")
     const fanSel = document.getElementById(`fanSel-${id}`);
     if (fanSel)
       fanSel.addEventListener("change", () => onFanChange(id, fanSel.value));
-const pbtn = document.getElementById(`power-btn-${id}`);
+    const rbtn = document.getElementById(`refresh-${id}`);
+    if (rbtn) rbtn.addEventListener("click", () => onRefreshDevice(id));
+    const pbtn = document.getElementById(`power-btn-${id}`);
     if (pbtn) pbtn.addEventListener("click", () => onPowerToggle(id));
     const dec = document.getElementById(`tdec-${id}`);
     const inc = document.getElementById(`tinc-${id}`);
@@ -637,12 +649,29 @@ function setControlsDisabled(id, disabled) {
     `temp-${id}`,
     `tdec-${id}`,
     `tinc-${id}`,
-`power-btn-${id}`,
+    `power-btn-${id}`,
+    `refresh-${id}`,
   ];
   ids.forEach((domId) => {
     const el = document.getElementById(domId);
     if (el) el.disabled = !!disabled;
   });
+}
+
+function onRefreshDevice(id) {
+  const btn = document.getElementById(`refresh-${id}`);
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add("spinning");
+  }
+  refreshDevice(id, { forceControls: true })
+    .catch(() => {})
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("spinning");
+      }
+    });
 }
 
 function onPowerToggle(id) {
