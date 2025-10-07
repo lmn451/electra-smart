@@ -246,7 +246,7 @@
     <script src="./app.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
-        const swUrl = `/service-worker.js?v=${Date.now()}`; // cache-bust SW file on every load
+const swUrl = '/service-worker.js';
         navigator.serviceWorker
           .register(swUrl)
           .then((registration) => {
@@ -298,7 +298,10 @@
           .catch(() => {});
 
         // Reload when the new controller takes over
+let __swRefreshing = false;
         navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (__swRefreshing) return;
+          __swRefreshing = true;
           window.location.reload();
         });
       }
