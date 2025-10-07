@@ -439,7 +439,6 @@ h2 {
 select,
 input[type="number"],
 button {
-  min-height: 44px;
   font-size: 16px;
   touch-action: manipulation;
 }
