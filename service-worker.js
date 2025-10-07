@@ -1,27 +1,35 @@
-const STATIC_CACHE = 'electra-static-v3';
+// Build identifier: update this (or any content in this file) on each deploy to trigger SW update
+const BUILD_ID = '2025-10-07T17:57:32Z-ea60501';
+const STATIC_CACHE = `electra-static-${BUILD_ID}`;
 const OFFLINE_PAGE = '/offline.html';
+// Precache essential static assets (exclude navigation pages to keep them network-first)
 const APP_SHELL = [
-  '/',
-  '/index.html',
   '/styles.css',
   '/app.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/icons/apple-touch-icon-180x180.png',
+  '/icons/favicon-16x16.png',
+  '/icons/favicon-32x32.png',
+  '/icons/mstile-150x150.png',
   OFFLINE_PAGE
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(STATIC_CACHE);
+    await cache.addAll(APP_SHELL);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => ![STATIC_CACHE].includes(k)).map((k) => caches.delete(k))))
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== STATIC_CACHE).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('message', (event) => {
@@ -60,34 +68,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets
-  const isStatic = APP_SHELL.includes(url.pathname);
-  if (isStatic) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((cached) => {
-          if (cached) return cached;
-
-          return fetch(event.request)
-            .then((res) => {
-              const resClone = res.clone();
-              caches.open(STATIC_CACHE)
-                .then((cache) => cache.put(event.request, resClone));
-              return res;
-            })
-            .catch(() => {
-              // If it's the main page and we can't fetch it, serve offline page
-              if (url.pathname === '/' || url.pathname === '/index.html') {
-                return caches.match(OFFLINE_PAGE);
-              }
-              throw new Error('Resource unavailable offline');
-            });
-        })
-    );
+  // Cache-first for static assets (APP_SHELL only)
+  if (APP_SHELL.includes(url.pathname)) {
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      try {
+        const res = await fetch(event.request);
+        const cache = await caches.open(STATIC_CACHE);
+        cache.put(event.request, res.clone());
+        return res;
+      } catch (err) {
+        // Fallback to offline page only for navigation (handled below), otherwise propagate
+        return Promise.reject(err);
+      }
+    })());
     return;
   }
 
-  // For navigation requests, try network first, then cache, then offline page
+  // For navigation requests, always network-first, then cache, then offline page
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)

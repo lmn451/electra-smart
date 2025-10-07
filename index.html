@@ -246,29 +246,34 @@
     <script src="./app.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
+        const swUrl = `/service-worker.js?v=${Date.now()}`; // cache-bust SW file on every load
         navigator.serviceWorker
-          .register("/service-worker.js")
+          .register(swUrl)
           .then((registration) => {
             console.log("Service Worker registered successfully");
 
-            // Handle service worker updates
+            // Force an update check on load
+            try { registration.update(); } catch {}
+
+            // Also check when tab becomes visible
+            document.addEventListener("visibilitychange", () => {
+              if (!document.hidden) {
+                try { registration.update(); } catch {}
+              }
+            });
+
+            // If an updated SW is already waiting, activate it immediately
+            if (registration.waiting) {
+              registration.waiting.postMessage({ action: "skipWaiting" });
+            }
+
+            // Auto-activate newly installed SWs
             registration.addEventListener("updatefound", () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener("statechange", () => {
-                  if (
-                    newWorker.state === "installed" &&
-                    navigator.serviceWorker.controller
-                  ) {
-                    // New version available, show update prompt
-                    if (
-                      confirm(
-                        "A new version of Electra Control is available. Update now?"
-                      )
-                    ) {
-                      newWorker.postMessage({ action: "skipWaiting" });
-                      window.location.reload();
-                    }
+                  if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                    registration.waiting?.postMessage({ action: "skipWaiting" });
                   }
                 });
               }
@@ -278,14 +283,21 @@
             console.error("Service Worker registration failed:", error);
           });
 
-        // Listen for service worker messages
-        navigator.serviceWorker.addEventListener("message", (event) => {
-          if (event.data && event.data.action === "reload") {
-            window.location.reload();
-          }
-        });
+        // Optional: version.json check to detect new deployments even if SW doesn't change
+        fetch("/version.json", { cache: "no-store" })
+          .then((r) => r.ok ? r.json() : null)
+          .then((v) => {
+            if (!v || !v.version) return;
+            const prev = localStorage.getItem("pwaVersion");
+            if (prev && prev !== v.version) {
+              // Trigger SW update; SW will auto-activate and controllerchange will reload
+              navigator.serviceWorker.getRegistration().then((reg) => reg?.update?.());
+            }
+            localStorage.setItem("pwaVersion", v.version);
+          })
+          .catch(() => {});
 
-        // Handle service worker controller changes
+        // Reload when the new controller takes over
         navigator.serviceWorker.addEventListener("controllerchange", () => {
           window.location.reload();
         });

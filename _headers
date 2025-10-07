@@ -1,0 +1,15 @@
+# Prevent caching of SW/HTML so updates are always checked
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  ETag: "always"
+  Vary: *
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  ETag: "always"
+  Vary: *
+
+/version.json
+  Cache-Control: no-store
+  ETag: "always"
+  Vary: *
