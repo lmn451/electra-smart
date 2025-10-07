@@ -175,6 +175,71 @@
         <span id="statusLine" class="status"></span>
       </div>
 
+      <!-- Device card template for declarative rendering -->
+      <template id="device-card-template">
+        <div class="card">
+          <div class="header">
+            <div class="title" data-bind="title"></div>
+            <div class="header-right">
+              <div class="badge" data-bind="badge">—</div>
+              <button class="icon-btn" data-action="refresh" title="Refresh device" aria-label="Refresh device">↻</button>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="kv">
+              <span class="k">Mode</span>
+              <span data-bind="mode">—</span>
+            </div>
+            <div class="kv">
+              <span class="k">Fan</span>
+              <span data-bind="fan">—</span>
+            </div>
+            <div class="kv">
+              <span class="k">Setpoint</span>
+              <span data-bind="spt">—</span>
+            </div>
+            <div class="kv">
+              <span class="k">Current</span>
+              <span data-bind="cur">—</span>
+            </div>
+          </div>
+
+          <div class="controls controls-erg">
+            <div class="controls-left">
+              <select data-bind="mode-select">
+                <option value="">Mode…</option>
+                <option value="STBY">STBY (Standby)</option>
+                <option value="COOL">COOL</option>
+                <option value="FAN">FAN</option>
+                <option value="DRY" selected>DRY</option>
+                <option value="HEAT">HEAT</option>
+                <option value="AUTO">AUTO</option>
+              </select>
+
+              <select data-bind="fan-select">
+                <option value="">Fan…</option>
+                <option value="LOW" selected>LOW</option>
+                <option value="MED">MED</option>
+                <option value="HIGH">HIGH</option>
+                <option value="AUTO">AUTO</option>
+              </select>
+            </div>
+
+            <div class="controls-right tempctl-erg">
+              <input type="number" data-bind="temp-input" inputmode="numeric" placeholder="Temp °C" min="10" max="35" step="1" />
+              <div class="temp-vert">
+                <button class="btn temp-inc" data-action="temp-inc">+</button>
+                <button class="btn temp-dec" data-action="temp-dec">−</button>
+              </div>
+              <button class="btn power-btn power-under" data-action="power-toggle" aria-pressed="false" aria-label="Power">⏻</button>
+            </div>
+          </div>
+
+          <div class="status-indicator" data-bind="status-indicator"></div>
+        </div>
+      </template>
+
       <div id="devices" class="cards"></div>
     </main>
 

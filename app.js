@@ -99,21 +99,6 @@ async function apiFetch(url, options = {}) {
 
 // --- DOM Manipulation --- //
 
-function el(tag, attrs = {}, ...children) {
-  const e = document.createElement(tag);
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (k === "class") e.className = v;
-    else if (k === "text") e.textContent = v;
-    else if (k === "dataset")
-      Object.entries(v).forEach(([dk, dv]) => (e.dataset[dk] = dv));
-    else e.setAttribute(k, v);
-  });
-  children.forEach((c) =>
-    e.appendChild(typeof c === "string" ? document.createTextNode(c) : c)
-  );
-  return e;
-}
-
 // --- UI Updates --- //
 
 function setStatusLine(text, isError = false) {
@@ -259,168 +244,92 @@ function renderDeviceCards(devices) {
   container.classList.add("cards");
   container.innerHTML = "";
   if (!devices.length) {
-    container.appendChild(
-      el("div", { class: "empty", text: "No devices found." })
-    );
+    container.innerHTML = '<div class="empty">No devices found.</div>';
     return;
   }
+
+  const template = document.getElementById("device-card-template");
+
   devices.forEach((d) => {
     const id = (
-      d.id ??
-      d.imei ??
-      d.device_id ??
-      d.name ??
-      "unknown"
+      d.id ?? d.imei ?? d.device_id ?? d.name ?? "unknown"
     ).toString();
     const title = d.name ? `${d.name} — ${id}` : `Device ${id}`;
-    const card = el(
-      "div",
-      { class: "card", dataset: { id: String(id) } },
-      el(
-        "div",
-        { class: "header" },
-        el("div", { class: "title", text: title }),
-        el(
-          "div",
-          { class: "header-right" },
-          el("div", { class: "badge", id: `badge-${id}` }, "—"),
-          el(
-            "button",
-            {
-              id: `refresh-${id}`,
-              class: "icon-btn",
-              title: "Refresh device",
-              "aria-label": "Refresh device",
-            },
-            "↻"
-          )
-        )
-      ),
-      el(
-        "div",
-        { class: "grid" },
-        el("div", { class: "kv" },
-          el("span", { class: "k", text: "Mode" }),
-          el("span", { id: `mode-${id}`, text: "—" })
-        ),
-        el("div", { class: "kv" },
-          el("span", { class: "k", text: "Fan" }),
-          el("span", { id: `fan-${id}`, text: "—" })
-        ),
-        el("div", { class: "kv" },
-          el("span", { class: "k", text: "Setpoint" }),
-          el("span", { id: `spt-${id}`, text: "—" })
-        ),
-        el("div", { class: "kv" },
-          el("span", { class: "k", text: "Current" }),
-          el("span", { id: `cur-${id}`, text: "—" })
-        )
-      ),
-      el(
-        "div",
-        { class: "controls controls-erg" },
-        el(
-          "div",
-          { class: "controls-left" },
-          buildModeSelect(id),
-          buildFanSelect(id)
-        ),
-        buildTempControl(id)
-      ),
-      el("div", { id: `status-indicator-${id}`, class: "status-indicator" })
-    );
-    container.appendChild(card);
 
-    const modeSel = document.getElementById(`modeSel-${id}`);
-    if (modeSel)
-      modeSel.addEventListener("change", () => onModeChange(id, modeSel.value));
-    const fanSel = document.getElementById(`fanSel-${id}`);
-    if (fanSel)
-      fanSel.addEventListener("change", () => onFanChange(id, fanSel.value));
-    const rbtn = document.getElementById(`refresh-${id}`);
-    if (rbtn) rbtn.addEventListener("click", () => onRefreshDevice(id));
-    const pbtn = document.getElementById(`power-btn-${id}`);
-    if (pbtn) pbtn.addEventListener("click", () => onPowerToggle(id));
-    const dec = document.getElementById(`tdec-${id}`);
-    const inc = document.getElementById(`tinc-${id}`);
-if (dec)
-      dec.onclick = () => {
-        if (state.pendingById.get(String(id))) return;
-        stepTemp(id, -1);
-        applyTemp(id);
-      };
-if (inc)
-      inc.onclick = () => {
+    // Clone template content
+    const fragment = template.content.cloneNode(true);
+    const card = fragment.firstElementChild;
+    if (!card) return;
+    card.dataset.id = String(id);
+
+    // Bind static text
+    const titleEl = card.querySelector('[data-bind="title"]');
+    if (titleEl) titleEl.textContent = title;
+
+    // Assign IDs used by status painting and handlers
+    const badge = card.querySelector('[data-bind="badge"]');
+    if (badge) badge.id = `badge-${id}`;
+    const modeSpan = card.querySelector('[data-bind="mode"]');
+    if (modeSpan) modeSpan.id = `mode-${id}`;
+    const fanSpan = card.querySelector('[data-bind="fan"]');
+    if (fanSpan) fanSpan.id = `fan-${id}`;
+    const sptSpan = card.querySelector('[data-bind="spt"]');
+    if (sptSpan) sptSpan.id = `spt-${id}`;
+    const curSpan = card.querySelector('[data-bind="cur"]');
+    if (curSpan) curSpan.id = `cur-${id}`;
+    const statusInd = card.querySelector('[data-bind="status-indicator"]');
+    if (statusInd) statusInd.id = `status-indicator-${id}`;
+
+    const modeSel = card.querySelector('[data-bind="mode-select"]');
+    if (modeSel) modeSel.id = `modeSel-${id}`;
+    const fanSel = card.querySelector('[data-bind="fan-select"]');
+    if (fanSel) fanSel.id = `fanSel-${id}`;
+    const tempInput = card.querySelector('[data-bind="temp-input"]');
+    if (tempInput) tempInput.id = `temp-${id}`;
+
+    const rbtn = card.querySelector('[data-action="refresh"]');
+    if (rbtn) {
+      rbtn.id = `refresh-${id}`;
+      rbtn.addEventListener("click", () => onRefreshDevice(id));
+    }
+    const pbtn = card.querySelector('[data-action="power-toggle"]');
+    if (pbtn) {
+      pbtn.id = `power-btn-${id}`;
+      pbtn.addEventListener("click", () => onPowerToggle(id));
+    }
+    const incBtn = card.querySelector('[data-action="temp-inc"]');
+    if (incBtn) {
+      incBtn.id = `tinc-${id}`;
+      incBtn.addEventListener("click", () => {
         if (state.pendingById.get(String(id))) return;
         stepTemp(id, +1);
         applyTemp(id);
-      };
-    const tempInput = document.getElementById(`temp-${id}`);
-if (tempInput) {
+      });
+    }
+    const decBtn = card.querySelector('[data-action="temp-dec"]');
+    if (decBtn) {
+      decBtn.id = `tdec-${id}`;
+      decBtn.addEventListener("click", () => {
+        if (state.pendingById.get(String(id))) return;
+        stepTemp(id, -1);
+        applyTemp(id);
+      });
+    }
+    if (modeSel) {
+      modeSel.addEventListener("change", () => onModeChange(id, modeSel.value));
+    }
+    if (fanSel) {
+      fanSel.addEventListener("change", () => onFanChange(id, fanSel.value));
+    }
+    if (tempInput) {
       tempInput.addEventListener("change", () => {
         if (state.pendingById.get(String(id))) return;
         applyTemp(id);
       });
     }
+
+    container.appendChild(card);
   });
-}
-
-function buildModeSelect(id) {
-  const sel = el(
-    "select",
-    { id: `modeSel-${id}` },
-    el("option", { value: "", text: "Mode…" }),
-    el("option", { value: "STBY", text: "STBY (Standby)" }),
-    el("option", { value: "COOL", text: "COOL" }),
-    el("option", { value: "FAN", text: "FAN" }),
-    el("option", { value: "DRY", text: "DRY" }),
-    el("option", { value: "HEAT", text: "HEAT" }),
-    el("option", { value: "AUTO", text: "AUTO" })
-  );
-  // UI default only; will be replaced by actual status when known
-  sel.value = "DRY";
-  return sel;
-}
-
-function buildFanSelect(id) {
-  const sel = el(
-    "select",
-    { id: `fanSel-${id}` },
-    el("option", { value: "", text: "Fan…" }),
-    el("option", { value: "LOW", text: "LOW" }),
-    el("option", { value: "MED", text: "MED" }),
-    el("option", { value: "HIGH", text: "HIGH" }),
-    el("option", { value: "AUTO", text: "AUTO" })
-  );
-  // UI default only; will be replaced by actual status when known
-  sel.value = "LOW";
-  return sel;
-}
-
-function buildTempControl(id) {
-  const input = el("input", {
-    id: `temp-${id}`,
-    type: "number",
-    inputmode: "numeric",
-    placeholder: "Temp °C",
-    min: "10",
-    max: "35",
-    step: "1",
-    class: 'temp'
-  });
-  const incBtn = el("button", { id: `tinc-${id}`, class: "btn temp-inc" }, "+");
-  const decBtn = el("button", { id: `tdec-${id}`, class: "btn temp-dec" }, "−");
-  const vert = el("div", { class: "temp-vert" }, incBtn, decBtn);
-  const powerBtn = el("button", { id: `power-btn-${id}`, class: "btn power-btn power-under", "aria-pressed": "false", "aria-label": "Power" }, "⏻");
-  const wrap = el(
-    "div",
-    { class: "right-thumb-controls" },
-    input,
-    incBtn,
-    decBtn,
-    powerBtn
-  );
-  return wrap;
 }
 
 async function refreshDevice(id, opts = {}) {
