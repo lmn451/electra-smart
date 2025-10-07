@@ -226,13 +226,11 @@
               </select>
             </div>
 
-            <div class="controls-right tempctl-erg">
-              <input type="number" data-bind="temp-input" inputmode="numeric" placeholder="Temp °C" min="10" max="35" step="1" />
-              <div class="temp-vert">
-                <button class="btn temp-inc" data-action="temp-inc">+</button>
-                <button class="btn temp-dec" data-action="temp-dec">−</button>
-              </div>
-              <button class="btn power-btn" data-action="power-toggle" aria-pressed="false" aria-label="Power">⏻</button>
+            <div class="controls-right right-thumb-controls">
+              <input type="number" data-bind="temp-input" class="grid-temp" inputmode="numeric" placeholder="Temp °C" min="10" max="35" step="1" />
+              <button class="btn grid-inc" data-action="temp-inc">+</button>
+              <button class="btn grid-dec" data-action="temp-dec">−</button>
+              <button class="btn power-btn grid-power" data-action="power-toggle" aria-pressed="false" aria-label="Power">⏻</button>
             </div>
           </div>
 

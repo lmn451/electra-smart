@@ -8,6 +8,7 @@
   --ok: #3ddc97;
   --warn: #ffb020;
   --err: #ff6b6b;
+  --ctl-size: 52px; /* unified square size for temp, +, -, power */
 }
 
 html,
@@ -444,73 +445,62 @@ button {
 }
 
 /* New vertical temperature control for mobile ergonomics */
+/* Old vertical control layout not used for right thumb grid anymore */
 .tempctl-erg {
   display: grid;
-  grid-template-columns: 1fr auto auto;
   gap: 0.75rem;
-  align-items: start;
-  grid-template-areas:
-    "temp vert power";
+  align-items: center;
 }
-.tempctl-erg input[type="number"] {
-  grid-area: temp;
-  font-size: 2rem;
-  text-align: center;
-  padding: 0.75rem 1rem;
-  height: 110px;
-  width: 100%;
-}
-.temp-vert {
-  grid-area: vert;
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 0.5rem;
-}
-.temp-vert .btn {
-  width: 52px;
-  height: 52px;
-  font-size: 1.35rem;
-  font-weight: 800;
-  border-radius: 0.85rem;
-  padding: 0;
-}
-.temp-vert .temp-inc {
-  background: #0f1317;
-  grid-area: inc;
-  width: 52px;
-  height: 52px;
-}
-.temp-vert .temp-dec {
-  background: #0f1317;
-  grid-area: dec;
-  width: 52px;
-  height: 52px;
-}
-
-.input .temp {
-  grid-area: temp;
-  width: 52px;
-  height: 52px;
-}
-
+/* Remove older temp-vert stack in favor of right-thumb-controls */
 .power-btn {
-  width: 52px;
-  height: 52px;
+  width: var(--ctl-size);
+  height: var(--ctl-size);
 }
 .tempctl-erg .power-btn {
   grid-area: power;
   align-self: end;
 }
-
 .right-thumb-controls {
   display: grid;
   grid-template-areas:
     "temp inc"
     "power dec";
-  gap: 6px;
-  grid-template-columns: 52px 52px;
-  grid-template-rows: 52px 52px;
+  gap: 8px;
+  grid-template-columns: var(--ctl-size) var(--ctl-size);
+  grid-template-rows: var(--ctl-size) var(--ctl-size);
+  align-items: stretch;
+  justify-items: stretch;
 }
+/* Elements mapped to grid areas and equal sizing */
+.right-thumb-controls .grid-temp {
+  grid-area: temp;
+  width: var(--ctl-size);
+  height: var(--ctl-size);
+  font-size: 1.4rem;
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.right-thumb-controls .grid-temp::-webkit-outer-spin-button,
+.right-thumb-controls .grid-temp::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.right-thumb-controls .grid-inc,
+.right-thumb-controls .grid-dec,
+.right-thumb-controls .grid-power {
+  width: var(--ctl-size);
+  height: var(--ctl-size);
+}
+.right-thumb-controls .grid-inc,
+.right-thumb-controls .grid-dec {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.right-thumb-controls .grid-inc { grid-area: inc; }
+.right-thumb-controls .grid-dec { grid-area: dec; }
+.right-thumb-controls .grid-power { grid-area: power; }
 
 
 @media (min-width: 640px) {
