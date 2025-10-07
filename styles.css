@@ -446,16 +446,22 @@ button {
 /* New vertical temperature control for mobile ergonomics */
 .tempctl-erg {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 0.75rem;
-  align-items: center;
+  align-items: start;
+  grid-template-areas:
+    "temp vert power";
 }
 .tempctl-erg input[type="number"] {
+  grid-area: temp;
   font-size: 2rem;
   text-align: center;
   padding: 0.75rem 1rem;
+  height: 110px;
+  width: 100%;
 }
 .temp-vert {
+  grid-area: vert;
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: 0.5rem;
@@ -488,9 +494,12 @@ button {
 }
 
 .power-btn {
-  grid-area: power;
   width: 52px;
   height: 52px;
+}
+.tempctl-erg .power-btn {
+  grid-area: power;
+  align-self: end;
 }
 
 .right-thumb-controls {
@@ -503,12 +512,6 @@ button {
   grid-template-rows: 52px 52px;
 }
 
-/* Place power button under temperature control, aligned to the right */
-.tempctl-erg .power-under {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin-top: 0.5rem;
-}
 
 @media (min-width: 640px) {
   .cards {
