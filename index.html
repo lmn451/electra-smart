@@ -230,7 +230,12 @@
               <input type="number" data-bind="temp-input" class="grid-temp" inputmode="numeric" placeholder="Temp °C" min="10" max="35" step="1" />
               <button class="btn grid-inc" data-action="temp-inc">+</button>
               <button class="btn grid-dec" data-action="temp-dec">−</button>
-              <button class="btn power-btn grid-power" data-action="power-toggle" aria-pressed="false" aria-label="Power">⏻</button>
+<button class="btn power-btn grid-power" data-action="power-toggle" aria-pressed="false" aria-label="Power">
+                <svg class="icon-power" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                  <path d="M12 3v8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M5.5 6.5a8 8 0 1 0 13 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
           </div>
 
