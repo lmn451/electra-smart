@@ -219,7 +219,7 @@ async function loadDevices() {
       console.warn("No devices found");
     } else if (state.deviceData.length > 1) {
       console.warn(
-        `Multiple devices found: ${state.deviceData.length}. Rendering all.`
+        `Multiple devices found: ${state.deviceData.length}. Rendering all.`,
       );
     }
     renderDeviceCards(state.devices);
@@ -252,7 +252,11 @@ function renderDeviceCards(devices) {
 
   devices.forEach((d) => {
     const id = (
-      d.id ?? d.imei ?? d.device_id ?? d.name ?? "unknown"
+      d.id ??
+      d.imei ??
+      d.device_id ??
+      d.name ??
+      "unknown"
     ).toString();
     const title = d.name ? `${d.name} — ${id}` : `Device ${id}`;
 
@@ -434,22 +438,27 @@ function delay(ms) {
 function setCardStatus(id, status) {
   const indicator = document.getElementById(`status-indicator-${id}`);
   if (!indicator) return;
-  indicator.className = "status-indicator";
+
+  // Ensure base class is present, but avoid clobbering other classes
+  indicator.classList.add("status-indicator");
+
+  // Remove only known status classes before applying the new one
+  const statusClasses = ["status-updating", "status-success", "status-error"];
+  statusClasses.forEach((cls) => indicator.classList.remove(cls));
+
   if (status === "updating") {
     indicator.classList.add("status-updating");
   } else if (status === "success") {
     indicator.classList.add("status-success");
     setTimeout(() => {
-      if (indicator.classList.contains("status-success")) {
-        indicator.classList.remove("status-success");
-      }
+      // Only remove the transient success state; preserve base/other classes
+      indicator.classList.remove("status-success");
     }, 2000);
   } else if (status === "error") {
     indicator.classList.add("status-error");
     setTimeout(() => {
-      if (indicator.classList.contains("status-error")) {
-        indicator.classList.remove("status-error");
-      }
+      // Only remove the transient error state; preserve base/other classes
+      indicator.classList.remove("status-error");
     }, 3000);
   }
 }
@@ -496,49 +505,51 @@ function pollOptimistic(id) {
   const entry = state.optimisticById.get(key);
   if (!entry) return;
 
-  refreshDevice(id).then(() => {
-    const currentEntry = state.optimisticById.get(key);
-    if (!currentEntry) return; // already cleared
+  refreshDevice(id)
+    .then(() => {
+      const currentEntry = state.optimisticById.get(key);
+      if (!currentEntry) return; // already cleared
 
-    const f = state.statusMap.get(key);
-    const d = currentEntry.desired || {};
-    const matched =
-      (d.mode === undefined || f?.mode === d.mode) &&
-      (d.fan === undefined || f?.fan === d.fan) &&
-      (d.spt === undefined || f?.spt === d.spt) &&
-      (d.isOn === undefined || f?.isOn === d.isOn);
+      const f = state.statusMap.get(key);
+      const d = currentEntry.desired || {};
+      const matched =
+        (d.mode === undefined || f?.mode === d.mode) &&
+        (d.fan === undefined || f?.fan === d.fan) &&
+        (d.spt === undefined || f?.spt === d.spt) &&
+        (d.isOn === undefined || f?.isOn === d.isOn);
 
-    if (matched) {
-      // Success: state matches desired
-      state.optimisticById.delete(key);
-      setCardStatus(id, "success");
-      refreshDevice(id, { forceControls: true });
-      return;
-    }
+      if (matched) {
+        // Success: state matches desired
+        state.optimisticById.delete(key);
+        setCardStatus(id, "success");
+        refreshDevice(id, { forceControls: true });
+        return;
+      }
 
-    const now = Date.now();
-    if (now >= currentEntry.until) {
-      // Timeout: state still doesn't match after 3s
-      state.optimisticById.delete(key);
-      setCardStatus(id, "error");
-      refreshDevice(id, { forceControls: true });
-      return;
-    }
+      const now = Date.now();
+      if (now >= currentEntry.until) {
+        // Timeout: state still doesn't match after 3s
+        state.optimisticById.delete(key);
+        setCardStatus(id, "error");
+        refreshDevice(id, { forceControls: true });
+        return;
+      }
 
-    // Keep polling
-    setTimeout(() => pollOptimistic(id), 400);
-  }).catch(() => {
-    const currentEntry = state.optimisticById.get(key);
-    if (!currentEntry) return;
-    const now = Date.now();
-    if (now >= currentEntry.until) {
-      state.optimisticById.delete(key);
-      setCardStatus(id, "error");
-      refreshDevice(id, { forceControls: true });
-    } else {
+      // Keep polling
       setTimeout(() => pollOptimistic(id), 400);
-    }
-  });
+    })
+    .catch(() => {
+      const currentEntry = state.optimisticById.get(key);
+      if (!currentEntry) return;
+      const now = Date.now();
+      if (now >= currentEntry.until) {
+        state.optimisticById.delete(key);
+        setCardStatus(id, "error");
+        refreshDevice(id, { forceControls: true });
+      } else {
+        setTimeout(() => pollOptimistic(id), 400);
+      }
+    });
 }
 
 function startOptimistic(id, desired) {
@@ -600,7 +611,7 @@ async function directSend(id, partial) {
   const fields = state.statusMap ? state.statusMap.get(key) : undefined;
   const isModeChange = Object.prototype.hasOwnProperty.call(
     partial || {},
-    "mode"
+    "mode",
   );
   const needsPowerOn = !!(fields && fields.isOn === false && !isModeChange);
 
@@ -628,7 +639,8 @@ async function directSend(id, partial) {
     const desired = {};
     if (Object.prototype.hasOwnProperty.call(partial, "mode")) {
       desired.mode = partial.mode;
-      if (partial.mode === "STBY") desired.isOn = false; else desired.isOn = true;
+      if (partial.mode === "STBY") desired.isOn = false;
+      else desired.isOn = true;
     }
     if (Object.prototype.hasOwnProperty.call(partial, "fan")) {
       desired.fan = partial.fan;
@@ -772,7 +784,7 @@ function initUI() {
   });
 
   window.addEventListener("offline", () =>
-    setStatusLine("You are offline", true)
+    setStatusLine("You are offline", true),
   );
   window.addEventListener("online", () => setStatusLine(""));
 
